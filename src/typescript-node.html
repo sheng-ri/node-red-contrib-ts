@@ -13,10 +13,26 @@
         outputLabels: function(index) {
             return 'result';
         },
-        icon: "ts.svg",
+        icon: "typescript.svg",
         paletteLabel: 'typescript',
         label: function() {
-            return this.name || "typescript";
+            if (this.name) return this.name;
+            
+            const script = this.script || '';
+            for (const [key, label] of Object.entries({
+                'fetch(': '🌐 API',
+                'fs.': '📁 File',
+                'crypto.': '🔐 Crypto',
+                'setTimeout': '⏰ Timer',
+                'setInterval': '🔄 Loop',
+                'process.': '⚙️ Process',
+                'JSON.': '📄 JSON',
+                'Buffer': '🔢 Buffer'
+            })) {
+                if (script.includes(key)) return label;
+            }
+            
+            return "typescript";
         },
         oneditprepare: function() {
             var that = this;
