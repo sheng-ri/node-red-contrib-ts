@@ -1,7 +1,7 @@
 {
   "name": "node-red-contrib-typescript",
   "version": "1.0.0",
-  "description": "TypeScript node for Node-RED with IntelliSense - 6x faster execution",
+  "description": "Fast TypeScript node with type checking for Node-RED",
   "main": "dist/typescript-node.js",
   "keywords": [
     "node-red",

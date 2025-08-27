@@ -1,9 +1,12 @@
 # Node-RED TypeScript Node
 
-A TypeScript execution node for Node-RED that provides a Monaco editor with full IntelliSense support.
+A fast TypeScript execution node for Node-RED with Monaco editor and type checking.
 
 ## Installation
 
+Install via Node-RED palette manager by searching for `node-red-contrib-typescript`
+
+Or via npm:
 ```bash
 npm install node-red-contrib-typescript
 ```
@@ -33,20 +36,7 @@ Your TypeScript code has access to these variables:
 - `fetch` - HTTP client for API calls
 - `process` - Process information
 
-### Basic Usage
-
-**Simple data transformation:**
-```typescript
-// Transform the incoming payload
-const data = msg.payload;
-msg.payload = {
-    processed: true,
-    timestamp: new Date().toISOString(),
-    originalData: data
-};
-
-return msg;
-```
+### Usage
 
 **API call with error handling:**
 ```typescript
@@ -65,18 +55,6 @@ try {
 } catch (error) {
     node.error(error.message);
     return null;
-}
-```
-
-**Multiple outputs:**
-```typescript
-const data = msg.payload;
-
-// Route to different outputs based on data type
-if (data.type === 'error') {
-    return [null, { ...msg, payload: data }]; // Send to second output
-} else {
-    return [{ ...msg, payload: data }, null]; // Send to first output
 }
 ```
 
