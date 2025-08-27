@@ -202,8 +202,14 @@ function newCompilation(node: Node, script: string, useVm: boolean, RED: any): C
 
         exec = async (msg) => {
             vmCtx.msg = msg;
+
+            const context = node.context();
+            vmCtx.context = context;
+            vmCtx.flow = context.flow;
+            vmCtx.global = context.global;
+
             const outputs = vm.runInContext(compiledCode, vmCtx, {
-                timeout: 30000, // 30 second timeout
+                // timeout: 30000,
                 displayErrors: true
             });
             return outputs;
