@@ -81,10 +81,18 @@ try {
 
 ### Editor Features
 
-- **IntelliSense** - Auto-completion for available context variables
-- **Error Detection** - Real-time TypeScript error checking
+- **IntelliSense** - Auto-completion for available context variables with precise type definitions
+- **TypeScript Validation** - Real-time error checking with Node-RED context awareness
+- **Smart Error Filtering** - Automatically ignores await/return errors for seamless Node-RED integration
 - **Syntax Highlighting** - Full TypeScript syntax support
 - **Template Code** - Helpful starter template for new nodes
+
+![TypeScript Validation](screenshots/typescript-validation.png)
+
+The editor provides comprehensive TypeScript support with:
+- **Type checking** for all Node-RED context variables (`msg`, `node`, `env`, etc.)
+- **Automatic filtering** of context-specific errors (await/return statements work seamlessly)
+- **Real-time validation** as you type with precise error messages and suggestions
 
 ## License
 
