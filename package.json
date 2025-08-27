@@ -1,6 +1,6 @@
 {
   "name": "node-red-contrib-typescript",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Fast TypeScript node with type checking for Node-RED",
   "main": "dist/typescript-node.js",
   "keywords": [
