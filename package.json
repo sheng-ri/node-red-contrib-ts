@@ -5,13 +5,16 @@
   "main": "dist/typescript-node.js",
   "keywords": [
     "node-red",
-    "exec",
-    "bash",
-    "script",
     "typescript",
-    "utilities",
-    "tools",
-    "turbo"
+    "ts",
+    "function",
+    "script",
+    "type-checking",
+    "intellisense",
+    "monaco",
+    "performance",
+    "fast",
+    "editor"
   ],
   "repository": {
     "type": "git",
