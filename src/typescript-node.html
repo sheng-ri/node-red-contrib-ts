@@ -1,4 +1,138 @@
 <script type="text/javascript">
+
+    function getLabel() {
+        if (this.name) return this.name;
+        
+        let script = this.script || '';
+        for (const [key, label] of Object.entries({
+            'fetch(': '🌐 API',
+            'fs.': '📁 File',
+            'crypto.': '🔐 Crypto',
+            'setTimeout': '⏰ Timer',
+            'setInterval': '🔄 Loop',
+            'process.': '⚙️ Process',
+            'JSON.': '📄 JSON',
+            'Buffer': '🔢 Buffer'
+        })) {
+            if (script.includes(key)) return label;
+        }
+
+        // Extract keywords, limit to 20 chars
+        const e = { const: 1, let: 1, var: 1, msg: 1, payload: 1, as: 1, any: 1, string: 1, number: 1, return: 1, null: 1 };
+        let s = '';
+        const ws = script.toLowerCase().match(/\w\w+/g) || [];
+        for (let w of ws) {
+            if (!e[w]) {
+                e[w] = 1;
+                const n = s ? s + ' ' + w : w;
+                if (n.length <= 20) s = n;
+                else break;
+            }
+        }
+        if (s) return s;
+        
+        return "typescript";
+    }
+
+    function throwError(msg) {
+        throw new Error(msg + 'is required');
+    }
+
+    function configMonaco() {
+        console.log('[TS] Config Monaco', this);
+
+        const monaco = window.monaco || throwRequired('monaco');
+        const languages = monaco.languages || throwRequired('languages');
+        const tsLanguage = languages.typescript || throwRequired('tsLanguage');
+
+        const tsEditor = this.editor || throwRequired('tsEditor');
+        window.tsEditor = tsEditor;
+
+        const tsConfig = tsLanguage.typescriptDefaults || throwRequired('typescriptDefaults');
+        window.tsConfig = tsConfig;
+        
+        console.log('[TS] Ignoring diagnostic codes: 1375, 1378, 1108');
+
+        // Add Node-RED global types
+        const nodeRedTypes = `
+            declare const msg: any;
+            declare const node: {
+                log: (message: string) => void;
+                warn: (message: string) => void;
+                error: (error: string | Error, message?: any) => void;
+                context: () => {
+                    get: (key: string, store?: string) => any;
+                    set: (key: string, value: any, store?: string) => void;
+                    flow: any;
+                    global: any;
+                };
+                send: (msg: any | any[]) => void;
+                id: string;
+                type: string;
+                name?: string;
+            };
+            declare const RED: {
+                util: {
+                    getSetting: (node: any, key: string) => any;
+                };
+            };
+            declare const context: {
+                get: (key: string, store?: string) => any;
+                set: (key: string, value: any, store?: string) => void;
+                flow: any;
+                global: any;
+            };
+            declare const flow: any;
+            declare const global: any;
+            declare const env: {
+                get: (key: string) => any;
+            };
+            declare const fs: typeof import('fs/promises');
+            declare const path: typeof import('path');
+            declare const os: typeof import('os');
+            declare const crypto: typeof import('crypto');
+            declare const util: typeof import('util');
+            declare const process: typeof import('process');
+            declare const Buffer: typeof globalThis.Buffer;
+            declare const fetch: typeof globalThis.fetch;
+            declare const require: typeof globalThis.require;
+        `;
+        tsConfig.addExtraLib(nodeRedTypes, 'file:///node-red-types.d.ts');
+
+        tsConfig.setDiagnosticsOptions({
+            noSemanticValidation: false,
+            noSyntaxValidation: false,
+            noSuggestionDiagnostics: false,
+            diagnosticCodesToIgnore: [1375, 1378, 1108] // await/return errors
+        });
+        
+        tsConfig.setCompilerOptions({
+            target: tsLanguage.ScriptTarget.ES2022,
+            module: tsLanguage.ModuleKind.ES2022,
+            allowJs: true
+        });
+        
+        console.log('[TS] TypeScript configured', tsConfig);
+
+        tsEditor.getModel || throwRequired('getModel');
+        const tsModel = tsEditor.getModel() || throwRequired('tsModel');
+        window.tsModel = tsModel;
+        
+        console.log('[TS] model uri path', tsModel.uri.path);
+        
+        // Create TypeScript model with proper URI
+        if (!tsModel.uri.path.endsWith('.ts')) {
+            console.log('[TS] Creating .ts model');
+            const newModel = monaco.editor.createModel(
+                tsModel.getValue(),
+                'typescript',
+                monaco.Uri.parse('file:///node-red-contrib-ts.ts')
+            );
+            tsEditor.setModel(newModel);
+            tsModel.dispose();
+        }
+    }
+
     RED.nodes.registerType('typescript-node', {
         category: 'function',
         color: '#61adff',
@@ -15,39 +149,7 @@
         },
         icon: "typescript.svg",
         paletteLabel: 'typescript',
-        label: function() {
-            if (this.name) return this.name;
-            
-            let script = this.script || '';
-            for (const [key, label] of Object.entries({
-                'fetch(': '🌐 API',
-                'fs.': '📁 File',
-                'crypto.': '🔐 Crypto',
-                'setTimeout': '⏰ Timer',
-                'setInterval': '🔄 Loop',
-                'process.': '⚙️ Process',
-                'JSON.': '📄 JSON',
-                'Buffer': '🔢 Buffer'
-            })) {
-                if (script.includes(key)) return label;
-            }
-
-            // Extract keywords, limit to 20 chars
-            const e = { const: 1, let: 1, var: 1, msg: 1, payload: 1, as: 1, any: 1, string: 1, number: 1, return: 1, null: 1 };
-            let s = '';
-            const ws = script.toLowerCase().match(/\w\w+/g) || [];
-            for (let w of ws) {
-                if (!e[w]) {
-                    e[w] = 1;
-                    const n = s ? s + ' ' + w : w;
-                    if (n.length <= 20) s = n;
-                    else break;
-                }
-            }
-            if (s) return s;
-            
-            return "typescript";
-        },
+        label: getLabel,
         oneditprepare: function() {
             var that = this;
             
@@ -59,6 +161,7 @@
             this.editor = RED.editor.createEditor({
                 id: 'node-input-script-editor',
                 mode: 'ace/mode/typescript',
+                language: 'typescript',
                 value: $("#node-input-script").val() || ""
             });
             
@@ -66,43 +169,23 @@
             var session = this.editor.getSession();
             
             if (this.editor.type === "monaco") {
-                try {
-                    if (window.monaco && window.monaco.languages && window.monaco.languages.typescript) {
-                        var tsDefaults = window.monaco.languages.typescript.typescriptDefaults;
-                        if (tsDefaults) {
-                            console.log('[DEBUG] Configuring Monaco TypeScript defaults');
-                            tsDefaults.setDiagnosticsOptions({
-                                noSemanticValidation: true,
-                                noSyntaxValidation: false, // Garde la validation syntaxique de base
-                                noSuggestionDiagnostics: true
-                            });
-                            
-                            tsDefaults.setCompilerOptions({
-                                target: window.monaco.languages.typescript.ScriptTarget.ES2020,
-                                allowNonTsExtensions: true,
-                                moduleResolution: window.monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-                                module: window.monaco.languages.typescript.ModuleKind.CommonJS,
-                                noEmit: true,
-                                esModuleInterop: true,
-                                allowSyntheticDefaultImports: true,
-                                allowJs: true,
-                                typeRoots: ["node_modules/@types"]
-                            });
-                            
-                            console.log('[DEBUG] Monaco TypeScript configuration applied');
-                        }
+                // Wait for editor to be ready, then configure
+                setTimeout(() => {
+                    try {
+                        configMonaco.call(this);
                     }
-                } catch (error) {
-                    console.log('[DEBUG] Could not configure Monaco TypeScript:', error);
-                }
+                    catch (error) {
+                        console.error('[TS] Config Monaco Error', error);
+                    }
+                }, 100);
             } else {
-                console.log('[DEBUG] Using ACE Editor fallback configuration');
+                console.log('[TS] Using ACE Editor fallback configuration');
                 if (session.setAnnotations) {
                     session.setAnnotations([]);
                 }
             }
             
-            console.log('[DEBUG] TypeScript editor configuration completed');
+            console.log('[TS] TypeScript editor configuration completed');
             
             // Configure completion for available globals
             if (this.editor.completers) {
@@ -160,6 +243,8 @@ return {
             updateOutputs();
         },
         oneditsave: function() {
+            const script = this.editor.getValue();
+            console.log('[TS] Save', script);
             $("#node-input-script").val(this.editor.getValue());
             this.editor.destroy();
             delete this.editor;
@@ -192,7 +277,7 @@ return {
         <input type="hidden" id="node-input-script">
     </div>
     <div class="form-row node-text-editor-row">
-        <div style="height: 300px; min-height:200px;" class="node-text-editor" id="node-input-script-editor" title="TypeScript code to execute. Use {{payload.property}} for template substitution."></div>
+        <div style="height: 300px; min-height:200px;" class="node-text-editor" id="node-input-script-editor" title="TypeScript code to execute."></div>
     </div>
     <div class="form-row">
         <label for="node-input-outputs"><i class="icon-random"></i> Outputs</label>
