@@ -34,7 +34,7 @@
         return "typescript";
     }
 
-    function throwError(msg) {
+    function throwRequired(msg) {
         throw new Error(msg + 'is required');
     }
 
@@ -55,7 +55,10 @@
         // Add Node-RED global types
         const nodeRedTypes = `/// <reference lib="es2022" />
             /// <reference lib="dom" />
-            declare const msg: any;
+            declare const msg: {
+                payload: any;
+                [prop: string]: any;
+            };
             declare const node: {
                 log: (message: string) => void;
                 warn: (message: string) => void;
@@ -254,7 +257,7 @@ return {
         oneditsave: function() {
             const script = this.editor.getValue();
             console.log('[TS] Save', script);
-            $("#node-input-script").val(this.editor.getValue());
+            $("#node-input-script").val(script);
             this.editor.destroy();
             delete this.editor;
         },
