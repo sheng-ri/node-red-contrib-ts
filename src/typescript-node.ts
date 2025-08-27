@@ -12,12 +12,12 @@ export interface TypeScriptNodeDef extends NodeDef {
     name: string;
     script: string;
     outputs: number;
-    useFunction: boolean;
+    useVm: boolean;
 }
 
 interface Compilation {
     script: string;
-    useFunction: boolean;
+    useVm: boolean;
     exec: (msg: any) => Promise<any[]>,
 }
 
@@ -104,8 +104,8 @@ function compileTypeScript(node: Node, script: string): string {
     }
 }
 
-function newCompilation(node: Node, script: string, useFunction: boolean, RED: any): Compilation|undefined {
-    node.log(`TS: New Compilation (useFunction:${useFunction})`);
+function newCompilation(node: Node, script: string, useVm: boolean, RED: any): Compilation|undefined {
+    node.log(`TS: New Compilation (useVm:${useVm})`);
     node.log(script);
 
     if (!script || script.trim().length === 0) {
@@ -178,7 +178,7 @@ function newCompilation(node: Node, script: string, useFunction: boolean, RED: a
 
     let exec: (msg: any) => Promise<any[]>;
 
-    if (useFunction) {
+    if (!useVm) {
         const funArgs = Object.keys(ctx);
         let fun: Function;
         
@@ -210,7 +210,7 @@ function newCompilation(node: Node, script: string, useFunction: boolean, RED: a
         }
     }
     
-    return { script, useFunction, exec };
+    return { script, useVm, exec };
 }
 
 module.exports = (RED: NodeAPI) => {
@@ -224,16 +224,16 @@ module.exports = (RED: NodeAPI) => {
         this.on('input', async (msg: any) => {
             try {
                 const script: string = def.script || '';
-                const useFunction: boolean = def.useFunction !== false;
+                const useVm: boolean = def.useVm === true;
 
                 let comp = cache[this.id];
 
                 if (
                     !comp ||
                     comp.script !== script ||
-                    comp.useFunction !== useFunction
+                    comp.useVm !== useVm
                 ) {
-                    comp = newCompilation(this, script, useFunction, RED);
+                    comp = newCompilation(this, script, useVm, RED);
                     if (!comp) return;
                     cache[this.id] = comp;
                     this.log('Script compiled and cached');

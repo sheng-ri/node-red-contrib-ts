@@ -6,7 +6,7 @@
             name: { value: "" },
             script: { value: "" },
             outputs: { value: 1 },
-            useFunction: { value: false }
+            useVm: { value: false }
         },
         inputs: 1,
         outputs: 1,
@@ -170,8 +170,8 @@ return {
     </div>
     <div class="form-row">
         <label><i class="icon-cog"></i> Execution</label>
-        <input type="checkbox" id="node-input-useFunction" style="display:inline-block; width:auto; vertical-align:top;" title="Use Function constructor instead of VM (faster but less secure)">
-        <label for="node-input-useFunction" style="width:70%;" title="Use Function constructor instead of VM (faster but less secure)">Use Function mode (6x faster but less secure)</label>
+        <input type="checkbox" id="node-input-useVm" style="display:inline-block; width:auto; vertical-align:top;" title="Use VM instead of Function constructor (slower but more secure)">
+        <label for="node-input-useVm" style="width:70%;" title="Use VM instead of Function constructor (slower but more secure)">Use VM mode (slower but more secure)</label>
     </div>
 </script>
 
