@@ -23,6 +23,19 @@ Execute TypeScript code directly in your Node-RED flows with full type checking 
 - **Multiple Outputs** - Route messages to different outputs (1-10)
 - **Two Execution Modes** - Function mode (fast) or VM mode (secure)
 
+![TypeScript Node](screenshots/node.png)
+
+![Monaco Editor with IntelliSense](screenshots/intelliSense.png)
+
+### Performance Benchmark
+
+Benchmark results for 500,000 executions:
+- **Node-RED function node**: 11,886ms
+- **TypeScript node (Function mode)**: 6,177ms - **1.9x faster**
+- **TypeScript node (VM mode)**: 10,222ms - **1.2x faster**
+
+![Performance Benchmark](screenshots/benchmark.png)
+
 ### Available Context
 
 Your TypeScript code has access to these variables:
@@ -63,6 +76,8 @@ try {
 - **Script** - Your TypeScript code in the Monaco editor
 - **Outputs** - Number of outputs (1-10)
 - **Execution Mode** - Function mode (faster) or VM mode (more secure)
+
+![Node Configuration](screenshots/props.png)
 
 ### Editor Features
 
