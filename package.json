@@ -21,7 +21,8 @@
   "bugs": {
     "url": "https://github.com/benoitadam/node-red-contrib-typescript/issues"
   },
-  "license": "MIT",
+  "license": "LGPL-3.0",
+  "author": "Benoit Adam",
   "engines": {
     "node": ">=16.0.0"
   },

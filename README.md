@@ -88,4 +88,6 @@ try {
 
 ## License
 
-MIT
+This project is licensed under the LGPL-3.0 License - see the [LICENSE](LICENSE) file for details.
+
+You are free to use this software in commercial environments and modify it, but any modifications must be shared under the same license.
