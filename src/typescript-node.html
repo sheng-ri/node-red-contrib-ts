@@ -54,7 +54,8 @@
         console.log('[TS] Ignoring diagnostic codes: 1375, 1378, 1108');
 
         // Add Node-RED global types
-        const nodeRedTypes = `
+        const nodeRedTypes = `/// <reference lib="es2022" />
+            /// <reference lib="dom" />
             declare const msg: any;
             declare const node: {
                 log: (message: string) => void;
@@ -109,7 +110,9 @@
         tsConfig.setCompilerOptions({
             target: tsLanguage.ScriptTarget.ES2022,
             module: tsLanguage.ModuleKind.ES2022,
-            allowJs: true
+            allowJs: true,
+            lib: ['ES2022', 'DOM'],
+            skipLibCheck: false
         });
         
         console.log('[TS] TypeScript configured', tsConfig);
@@ -277,7 +280,7 @@ return {
         <input type="hidden" id="node-input-script">
     </div>
     <div class="form-row node-text-editor-row">
-        <div style="height: 300px; min-height:200px;" class="node-text-editor" id="node-input-script-editor" title="TypeScript code to execute."></div>
+        <div style="height: 300px; min-height:200px;" class="node-text-editor" id="node-input-script-editor"></div>
     </div>
     <div class="form-row">
         <label for="node-input-outputs"><i class="icon-random"></i> Outputs</label>
