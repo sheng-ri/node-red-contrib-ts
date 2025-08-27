@@ -44,11 +44,10 @@
         const monaco = window.monaco || throwRequired('monaco');
         const languages = monaco.languages || throwRequired('languages');
         const tsLanguage = languages.typescript || throwRequired('tsLanguage');
-
         const tsEditor = this.editor || throwRequired('tsEditor');
-        window.tsEditor = tsEditor;
-
         const tsConfig = tsLanguage.typescriptDefaults || throwRequired('typescriptDefaults');
+        
+        window.tsEditor = tsEditor;
         window.tsConfig = tsConfig;
         
         console.log('[TS] Ignoring diagnostic codes: 1375, 1378, 1108');
