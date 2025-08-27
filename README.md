@@ -4,11 +4,11 @@ A fast TypeScript execution node for Node-RED with Monaco editor and type checki
 
 ## Installation
 
-Install via Node-RED palette manager by searching for `node-red-contrib-typescript`
+Install via Node-RED palette manager by searching for `node-red-contrib-ts`
 
 Or via npm:
 ```bash
-npm install node-red-contrib-typescript
+npm install node-red-contrib-ts
 ```
 
 ## TypeScript Node

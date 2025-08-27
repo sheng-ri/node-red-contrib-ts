@@ -24,7 +24,7 @@ npm run build
 
 echo "📦 Creating package..."
 npm pack
-PACKAGE_FILE="$(ls -t node-red-contrib-typescript-*.tgz | head -n 1)"
+PACKAGE_FILE="$(ls -t node-red-contrib-ts-*.tgz | head -n 1)"
 if [[ -z "${PACKAGE_FILE:-}" ]]; then
   echo "❌ No package file found"
   exit 1
@@ -49,6 +49,6 @@ POD_NAME="$(get_pod)"
 echo "✅ New pod ready: $POD_NAME"
 
 echo "🔎 Checking that the node is installed..."
-kubectl exec -n "$NAMESPACE" "$POD_NAME" -- npm list --prefix /data node-red-contrib-typescript || true
+kubectl exec -n "$NAMESPACE" "$POD_NAME" -- npm list --prefix /data node-red-contrib-ts || true
 
 echo "✅ Test deployment completed!"
