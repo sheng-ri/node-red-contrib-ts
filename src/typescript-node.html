@@ -18,7 +18,7 @@
         label: function() {
             if (this.name) return this.name;
             
-            const script = this.script || '';
+            let script = this.script || '';
             for (const [key, label] of Object.entries({
                 'fetch(': '🌐 API',
                 'fs.': '📁 File',
@@ -31,6 +31,20 @@
             })) {
                 if (script.includes(key)) return label;
             }
+
+            // Extract keywords, limit to 20 chars
+            const e = { const: 1, let: 1, var: 1, msg: 1, payload: 1, as: 1, any: 1, string: 1, number: 1, return: 1, null: 1 };
+            let s = '';
+            const ws = script.toLowerCase().match(/\w\w+/g) || [];
+            for (let w of ws) {
+                if (!e[w]) {
+                    e[w] = 1;
+                    const n = s ? s + ' ' + w : w;
+                    if (n.length <= 20) s = n;
+                    else break;
+                }
+            }
+            if (s) return s;
             
             return "typescript";
         },
