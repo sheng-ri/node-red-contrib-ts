@@ -241,11 +241,13 @@ async function newCompilation(node: Node, script: string, useVm: boolean, RED: a
     return { script, useVm, exec };
 }
 
+interface TsNode extends Node {
+    comp: Compilation | undefined;
+}
+
 module.exports = (RED: NodeAPI) => {
-    const TypeScriptNode = function(this: Node, def: TypeScriptNodeDef) {
+    const TypeScriptNode = function(this: TsNode, def: TypeScriptNodeDef) {
         RED.nodes.createNode(this, def);
-        
-        let cache: Record<string, Compilation | undefined> = {};
         
         this.log('typescript-node ready');
         
@@ -255,20 +257,14 @@ module.exports = (RED: NodeAPI) => {
                 const useVm: boolean = def.useVm === true;
                 const libs: any[] = def.libs || [];
 
-                let comp = cache[this.id];
 
-                if (
-                    !comp ||
-                    comp.script !== script ||
-                    comp.useVm !== useVm
-                ) {
-                    comp = await newCompilation(this, script, useVm, RED, libs);
-                    if (!comp) return;
-                    cache[this.id] = comp;
+                if (!this.comp || this.comp.script !== script || this.comp.useVm !== useVm) {
+                    this.comp = await newCompilation(this, script, useVm, RED, libs);
+                    if (!this.comp) return;
                     this.log('Script compiled and cached');
                 }
                 
-                const outputs = await comp.exec(msg);
+                const outputs = await this.comp.exec(msg);
                 this.send(outputs);
 
             } catch (error: any) {
@@ -276,10 +272,10 @@ module.exports = (RED: NodeAPI) => {
             }
         });
         
-        // Clean up cache on node close
+        // Clean up compilation on node close
         this.on('close', () => {
             this.log('Cleaning up typescript-node...');
-            cache = {};
+            delete this.comp;
         });
     };
     
