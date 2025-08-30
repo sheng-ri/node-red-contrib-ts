@@ -5,16 +5,26 @@ import util from 'util';
 
 export interface TypeScriptNodeDef extends NodeDef {
     name: string;
-    script: string;
+    func: string;
+    initialize?: string;
+    finalize?: string;
     outputs: number;
+    timeout?: number;
     useVm: boolean;
+    updated?: number;
     libs?: Array<{var: string, module: string}>;
 }
 
+type Msg = {
+    [name: string]: any
+}
+
 interface Compilation {
-    script: string;
-    useVm: boolean;
-    exec: (msg: any) => Promise<any[]>,
+    updated: number;
+    ready: Promise<void>;
+    fun: (msg: Msg) => Promise<Msg|Msg[]>;
+    ini: () => Promise<void>;
+    fin: () => Promise<void>;
 }
 
 function compileTypeScript(node: Node, script: string): string {
@@ -124,15 +134,18 @@ async function injectModules(context: any, libs: any[], RED: any, node: Node): P
     await Promise.all(moduleLoadPromises);
 }
 
-async function newCompilation(node: Node, script: string, useVm: boolean, RED: any, libs: any[] = []): Promise<Compilation|undefined> {
-    node.log(`TS: New Compilation (useVm:${useVm})`);
-    node.log(script);
+async function newCompilation(node: TsNode, comp: Compilation, def: TypeScriptNodeDef, RED: any): Promise<void> {
+    const useVm = def.useVm === true;
+    const libs = def.libs || [];
 
-    if (!script || script.trim().length === 0) {
-        throw new Error('Empty script provided');
-    }
-
-    const compiledCode = compileTypeScript(node, `(async function() { ${script} })()`);
+    const funTs = def.func || (def as any).script || '';
+    const iniTs = def.initialize || '';
+    const finTs = def.finalize || '';
+    const timeout = Number(def.timeout) || undefined;
+    
+    const funJs = compileTypeScript(node, `(async function() { ${funTs}; return msg; })()`);
+    const iniJs = compileTypeScript(node, `(async function() { ${iniTs}; })()`);
+    const finJs = compileTypeScript(node, `(async function() { ${finTs}; })()`);
     
     const ctx: any = {
         msg: {},
@@ -198,47 +211,69 @@ async function newCompilation(node: Node, script: string, useVm: boolean, RED: a
     // Inject modules (including default ones defined in HTML)
     await injectModules(ctx, libs, RED, node);
 
-    let exec: (msg: any) => Promise<any[]>;
-
     if (!useVm) {
         const funArgs = Object.keys(ctx);
-        let fun: Function;
-        
-        fun = new Function(...funArgs, `return ${compiledCode}`);
-        
-        exec = async (msg) => {
+
+        const fun = new Function(...funArgs, `return ${funJs}`);
+        const ini = new Function(...funArgs, `return ${iniJs}`);
+        const fin = new Function(...funArgs, `return ${finJs}`);
+
+        comp.fun = async (msg) => {
             ctx.msg = msg;
-
-            const context = node.context();
-            ctx.context = context;
-            ctx.flow = context.flow;
-            ctx.global = context.global;
-
-            const args = funArgs.map(k => ctx[k]);
-            const outputs = fun(...args) as Promise<any[]>;
-            return outputs;
+            return fun(...funArgs.map(k => ctx[k]));
         }
+        comp.ini = () => ini(...funArgs.map(k => ctx[k]));
+        comp.fin = () => fin(...funArgs.map(k => ctx[k]));
     }
     else {
         const vmCtx = vm.createContext(ctx);
-
-        exec = async (msg) => {
+        
+        comp.fun = (msg) => {
             vmCtx.msg = msg;
-
-            const context = node.context();
-            vmCtx.context = context;
-            vmCtx.flow = context.flow;
-            vmCtx.global = context.global;
-
-            const outputs = vm.runInContext(compiledCode, vmCtx, {
-                // timeout: 30000,
+            return vm.runInContext(funJs, vmCtx, {
+                timeout,
                 displayErrors: true
             });
-            return outputs;
-        }
+        };
+        comp.ini = () => {
+            return vm.runInContext(iniJs, vmCtx, {
+                timeout,
+                displayErrors: true
+            });
+        };
+        comp.fin = () => {
+            return vm.runInContext(finJs, vmCtx, {
+                timeout,
+                displayErrors: true
+            });
+        };
     }
-    
-    return { script, useVm, exec };
+
+    try {
+        await comp.ini();
+    }
+    catch (error: any) {
+        node.error('Error in function init: ' + (error.stack || error.message))
+    }
+}
+
+async function getCompilation(node: TsNode, def: TypeScriptNodeDef, RED: any): Promise<Compilation|undefined> {
+    const updated: number = def.updated || 0;
+
+    if (node.comp?.updated !== updated) {
+        await node.comp?.fin();
+        node.comp = {
+            updated,
+            ready: Promise.resolve(),
+            fun: () => { throw 'no fun' },
+            ini: () => { throw 'no ini' },
+            fin: () => { throw 'no fin' },
+        };
+        node.comp.ready = newCompilation(node, node.comp, def, RED);
+    }
+
+    await node.comp.ready;
+    return node.comp;
 }
 
 interface TsNode extends Node {
@@ -249,22 +284,12 @@ module.exports = (RED: NodeAPI) => {
     const TypeScriptNode = function(this: TsNode, def: TypeScriptNodeDef) {
         RED.nodes.createNode(this, def);
         
-        this.log('typescript-node ready');
-        
         this.on('input', async (msg: any) => {
             try {
-                const script: string = def.script || '';
-                const useVm: boolean = def.useVm === true;
-                const libs: any[] = def.libs || [];
+                const comp = await getCompilation(this, def, RED);
+                if (!comp) return;
 
-
-                if (!this.comp || this.comp.script !== script || this.comp.useVm !== useVm) {
-                    this.comp = await newCompilation(this, script, useVm, RED, libs);
-                    if (!this.comp) return;
-                    this.log('Script compiled and cached');
-                }
-                
-                const outputs = await this.comp.exec(msg);
+                const outputs = await comp.fun(msg);
                 this.send(outputs);
 
             } catch (error: any) {
@@ -274,7 +299,7 @@ module.exports = (RED: NodeAPI) => {
         
         // Clean up compilation on node close
         this.on('close', () => {
-            this.log('Cleaning up typescript-node...');
+            if (this.comp) this.comp.fin();
             delete this.comp;
         });
     };
