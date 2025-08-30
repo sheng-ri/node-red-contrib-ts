@@ -90,12 +90,12 @@
 
             <div class="form-row node-input-libs-row hide" style="margin-bottom: 0px;">
                 <label><i class="fa fa-cubes"></i> <span data-i18n="node-red:function.label.modules"></span></label>
-                <button type="button" id="node-add-default-modules" class="red-ui-button" style="float: right; margin-top: -5px;">
-                    <i class="fa fa-plus"></i> Add default modules
-                </button>
             </div>
-            <div class="form-row node-input-libs-row hide" id="node-input-libs-container-row">
+            <div class="form-row node-input-libs-row hide" id="node-input-libs-container-row" style="position: relative;">
                 <ol id="node-input-libs-container"></ol>
+                <button type="button" id="node-add-default-modules" class="red-ui-button red-ui-button-small" style="position: absolute; right: 0; bottom: 0;" title="Add default modules">
+                    <i class="fa fa-cubes"></i><span> Add Defaults</span>
+                </button>
             </div>
         </div>
 
@@ -599,7 +599,7 @@
             if (RED.settings.functionExternalModules !== false) {
                 prepareLibraryConfig(that);
                 
-                // Bouton pour ajouter les modules par défaut
+                // Add default modules button logic
                 $("#node-add-default-modules").on("click", function() {
                     var defaultModules = [
                         { var: 'fs', module: 'fs/promises' },

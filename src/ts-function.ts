@@ -112,7 +112,7 @@ async function injectModules(context: any, libs: any[], RED: any, node: Node): P
         }
         
         try {
-            // Utiliser RED.import() comme dans le code original
+            // Use RED.import() as in the original code
             const loadedModule = await RED.import(lib.module);
             context[vname] = loadedModule.default || loadedModule;
         } catch (err: any) {
@@ -194,7 +194,7 @@ async function newCompilation(node: Node, script: string, useVm: boolean, RED: a
         }
     };
 
-    // Injecter les modules (incluant ceux par défaut définis dans le HTML)
+    // Inject modules (including default ones defined in HTML)
     await injectModules(ctx, libs, RED, node);
 
     let exec: (msg: any) => Promise<any[]>;
