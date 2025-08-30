@@ -143,9 +143,9 @@ async function newCompilation(node: TsNode, comp: Compilation, def: TypeScriptNo
     const finTs = def.finalize || '';
     const timeout = Number(def.timeout) || undefined;
     
-    const funJs = compileTypeScript(node, `(async function() { ${funTs}; return msg; })()`);
-    const iniJs = compileTypeScript(node, `(async function() { ${iniTs}; })()`);
-    const finJs = compileTypeScript(node, `(async function() { ${finTs}; })()`);
+    const funJs = compileTypeScript(node, `(async function() { ${funTs} })()`);
+    const iniJs = compileTypeScript(node, `(async function() { ${iniTs} })()`);
+    const finJs = compileTypeScript(node, `(async function() { ${finTs} })()`);
     
     const ctx: any = {
         msg: {},
@@ -160,8 +160,49 @@ async function newCompilation(node: TsNode, comp: Compilation, def: TypeScriptNo
         Date: Date,
         require,
         fetch: global.fetch || require('node-fetch').default,
+        context: {
+            set: function() {
+                node.context().set.apply(node,arguments as any);
+            },
+            get: function() {
+                return node.context().get.apply(node,arguments as any);
+            },
+            keys: function() {
+                return node.context().keys.apply(node,arguments as any);
+            },
+            get global() {
+                return node.context().global;
+            },
+            get flow() {
+                return node.context().flow;
+            }
+        },
+        flow: {
+            set: function() {
+                node.context().flow.set.apply(node,arguments as any);
+            },
+            get: function() {
+                return node.context().flow.get.apply(node,arguments as any);
+            },
+            keys: function() {
+                return node.context().flow.keys.apply(node,arguments as any);
+            }
+        },
+        global: {
+            set: function() {
+                node.context().global.set.apply(node,arguments as any);
+            },
+            get: function() {
+                return node.context().global.get.apply(node,arguments as any);
+            },
+            keys: function() {
+                return node.context().global.keys.apply(node,arguments as any);
+            }
+        },
         env: {
-            get: (envVar: string) => RED.util.getSetting(node, envVar)
+            get: function(envVar: any) {
+                return RED.util.getSetting(node, envVar);
+            }
         },
         setTimeout: function () {
             var func = arguments[0];
