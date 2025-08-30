@@ -83,9 +83,15 @@
                     <input id="node-input-outputs" style="width: 60px;" value="1">
                 </div>
                 <div class="form-row" style="display: inline-block;">
-                    <label for="node-input-timeout"><i class="fa fa-clock-o"></i> <span data-i18n="node-red:function.label.timeout"></span></label>
+                    <label for="node-input-timeout" style="width: 140px;"><i class="fa fa-clock-o"></i> <span data-i18n="node-red:function.label.timeout"></span></label>
                     <input id="node-input-timeout" style="width: 60px;" data-i18n="[placeholder]join.seconds">
                 </div>
+            </div>
+
+            <div class="form-row">
+                <label><i class="fa fa-cog"></i> Execution</label>
+                <input type="checkbox" id="node-input-useVm" style="display:inline-block; width:auto; vertical-align:top;" title="Use VM instead of Function constructor (slower but more secure)">
+                <label for="node-input-useVm" style="width:70%;" title="Use VM instead of Function constructor (slower but more secure)">Use VM mode (slower but more secure)</label>
             </div>
 
             <div class="form-row node-input-libs-row hide" style="margin-bottom: 0px;">
@@ -373,6 +379,7 @@
             func: {value:"\nreturn msg;"},
             outputs: {value:1},
             timeout:{value:RED.settings.functionTimeout || 0},
+            useVm: {value:false},
             noerr: {value:0,required:true,
                     validate: function(v, opt) {
                         if (!v) {
