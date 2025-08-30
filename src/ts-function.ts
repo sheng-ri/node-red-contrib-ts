@@ -146,6 +146,7 @@ async function newCompilation(node: Node, script: string, useVm: boolean, RED: a
         URLSearchParams: URLSearchParams,
         Date: Date,
         require,
+        fetch: global.fetch || require('node-fetch').default,
         env: {
             get: (envVar: string) => RED.util.getSetting(node, envVar)
         },
