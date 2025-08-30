@@ -195,57 +195,58 @@
         if (!window.tsConfigured) {
             console.log('[TS] Configuring TypeScript language service');
 
+            const msgType = `declare const msg: {
+    payload: any;
+    [prop: string]: any;
+};`
+
             // Add Node-RED global types
             const nodeRedTypes = `/// <reference lib="es2022" />
-                /// <reference lib="dom" />
-                declare const msg: {
-                    payload: any;
-                    [prop: string]: any;
-                };
-                declare const node: {
-                    log: (message: string) => void;
-                    warn: (message: string) => void;
-                    error: (error: string | Error, message?: any) => void;
-                    context: () => {
-                        get: (key: string, store?: string) => any;
-                        set: (key: string, value: any, store?: string) => void;
-                        flow: any;
-                        global: any;
-                    };
-                    send: (msg: any | any[]) => void;
-                    id: string;
-                    type: string;
-                    name?: string;
-                };
-                declare const RED: {
-                    util: {
-                        getSetting: (node: any, key: string) => any;
-                    };
-                };
-                declare const context: {
-                    get: (key: string, store?: string) => any;
-                    set: (key: string, value: any, store?: string) => void;
-                    flow: any;
-                    global: any;
-                };
-                declare const flow: {
-                    get: <T = any>(key: string) => T;
-                    set: (key: string, value: any) => void;
-                };
-                declare const global: any;
-                declare const env: {
-                    get: (key: string) => any;
-                };
-                declare const fs: typeof import('fs/promises');
-                declare const path: typeof import('path');
-                declare const os: typeof import('os');
-                declare const crypto: typeof import('crypto');
-                declare const util: typeof import('util');
-                declare const process: typeof import('process');
-                declare const Buffer: typeof globalThis.Buffer;
-                declare const fetch: typeof globalThis.fetch;
-                declare const require: typeof globalThis.require;
-            `;
+declare const node: {
+    log: (message: string) => void;
+    warn: (message: string) => void;
+    error: (error: string | Error, message?: any) => void;
+    context: () => {
+        get: (key: string, store?: string) => any;
+        set: (key: string, value: any, store?: string) => void;
+        flow: any;
+        global: any;
+    };
+    send: (msg: any | any[]) => void;
+    id: string;
+    type: string;
+    name?: string;
+};
+declare const RED: {
+    util: {
+        getSetting: (node: any, key: string) => any;
+    };
+};
+declare const context: {
+    get: (key: string, store?: string) => any;
+    set: (key: string, value: any, store?: string) => void;
+    flow: any;
+    global: any;
+};
+declare const flow: {
+    get: <T = any>(key: string) => T;
+    set: (key: string, value: any) => void;
+};
+declare const global: any;
+declare const env: {
+    get: (key: string) => any;
+};
+declare const fs: typeof import('fs/promises');
+declare const path: typeof import('path');
+declare const os: typeof import('os');
+declare const crypto: typeof import('crypto');
+declare const util: typeof import('util');
+declare const process: typeof import('process');
+declare const Buffer: typeof globalThis.Buffer;
+declare const fetch: typeof globalThis.fetch;
+declare const require: typeof globalThis.require;
+
+${msgType}}`;
             tsConfig.addExtraLib(nodeRedTypes, 'file:///node-red-types.d.ts');
 
             tsConfig.setDiagnosticsOptions({
