@@ -267,6 +267,7 @@ ${declare}`;
                 noSyntaxValidation: false,
                 noSuggestionDiagnostics: false,
                 diagnosticCodesToIgnore: [
+                    2451, // Cannot redeclare block-scoped variable 'msg'.
                     1375, // 'await' expressions are only allowed at the top level of a file when that file is a module
                     1378, // Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022'
                     1108  // A 'return' statement can only be used within a function body
