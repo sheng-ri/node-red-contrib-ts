@@ -178,6 +178,180 @@
         return "typescript";
     }
 
+    function throwRequired(msg) {
+        throw new Error(msg + ' is required');
+    }
+
+    function configMonaco(editor) {
+        console.log('[TS] Config Monaco', editor);
+
+        const monaco = window.monaco || throwRequired('monaco');
+        const languages = monaco.languages || throwRequired('languages');
+        const tsLanguage = languages.typescript || throwRequired('tsLanguage');
+        const tsEditor = editor || throwRequired('tsEditor');
+        const tsConfig = tsLanguage.typescriptDefaults || throwRequired('typescriptDefaults');
+        
+        window.tsEditor = tsEditor;
+        window.tsConfig = tsConfig;
+        
+        console.log('[TS] Ignoring diagnostic codes: 1375, 1378, 1108');
+
+        // Add Node-RED global types
+        const nodeRedTypes = `/// <reference lib="es2022" />
+            /// <reference lib="dom" />
+            declare const msg: {
+                payload: any;
+                [prop: string]: any;
+            };
+            declare const node: {
+                log: (message: string) => void;
+                warn: (message: string) => void;
+                error: (error: string | Error, message?: any) => void;
+                context: () => {
+                    get: (key: string, store?: string) => any;
+                    set: (key: string, value: any, store?: string) => void;
+                    flow: any;
+                    global: any;
+                };
+                send: (msg: any | any[]) => void;
+                id: string;
+                type: string;
+                name?: string;
+            };
+            declare const RED: {
+                util: {
+                    getSetting: (node: any, key: string) => any;
+                };
+            };
+            declare const context: {
+                get: (key: string, store?: string) => any;
+                set: (key: string, value: any, store?: string) => void;
+                flow: any;
+                global: any;
+            };
+            declare const flow: any;
+            declare const global: any;
+            declare const env: {
+                get: (key: string) => any;
+            };
+            declare const fs: typeof import('fs/promises');
+            declare const path: typeof import('path');
+            declare const os: typeof import('os');
+            declare const crypto: typeof import('crypto');
+            declare const util: typeof import('util');
+            declare const process: typeof import('process');
+            declare const Buffer: typeof globalThis.Buffer;
+            declare const fetch: typeof globalThis.fetch;
+            declare const require: typeof globalThis.require;
+        `;
+        tsConfig.addExtraLib(nodeRedTypes, 'file:///node-red-types.d.ts');
+
+        tsConfig.setDiagnosticsOptions({
+            noSemanticValidation: false,
+            noSyntaxValidation: false,
+            noSuggestionDiagnostics: false,
+            diagnosticCodesToIgnore: [
+                1375, // 'await' expressions are only allowed at the top level of a file when that file is a module
+                1378, // Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022'
+                1108, // A 'return' statement can only be used within a function body
+                2339  // Property 'X' does not exist on type 'unknown'
+            ]
+        });
+        
+        tsConfig.setCompilerOptions({
+            target: tsLanguage.ScriptTarget.ES2022,
+            module: tsLanguage.ModuleKind.ES2022,
+            allowJs: true,
+            lib: ['ES2022', 'DOM'],
+            skipLibCheck: false,
+            noImplicitAny: false,
+            strict: false
+        });
+        
+        console.log('[TS] TypeScript configured', tsConfig);
+
+        tsEditor.getModel || throwRequired('getModel');
+        const tsModel = tsEditor.getModel() || throwRequired('tsModel');
+        window.tsModel = tsModel;
+        
+        console.log('[TS] model uri path', tsModel.uri.path);
+        
+        // Create TypeScript model with proper URI
+        if (!tsModel.uri.path.endsWith('.ts')) {
+            console.log('[TS] Creating .ts model');
+            const newModel = monaco.editor.createModel(
+                tsModel.getValue(),
+                'typescript',
+                monaco.Uri.parse('file:///node-red-contrib-ts.ts')
+            );
+            tsEditor.setModel(newModel);
+            tsModel.dispose();
+        }
+    }
+
+    function configEditor(options) {
+        options.mode = "ace/mode/typescript";
+        options.language = "typescript";
+        
+        return options;
+    }
+
+    function setEditor(editor) {
+
+        // Configure Monaco TypeScript editor
+        var session = editor.getSession();
+        
+        if (editor.type === "monaco") {
+            // Wait for editor to be ready, then configure
+            setTimeout(() => {
+                try {
+                    configMonaco(editor);
+                }
+                catch (error) {
+                    console.error('[TS] Config Monaco Error', error);
+                }
+            }, 100);
+        } else {
+            console.log('[TS] Using ACE Editor fallback configuration');
+            if (session.setAnnotations) {
+                session.setAnnotations([]);
+            }
+        }
+        
+        console.log('[TS] TypeScript editor configuration completed');
+        
+        // Configure completion for available globals
+        if (editor.completers) {
+            editor.completers.push({
+                getCompletions: function(editor, session, pos, prefix, callback) {
+                    var completions = [
+                        // Node-RED context
+                        {name: "msg", value: "msg", score: 1000, meta: "node-red"},
+                        {name: "node", value: "node", score: 1000, meta: "node-red"},
+                        {name: "RED", value: "RED", score: 1000, meta: "node-red"},
+                        {name: "global", value: "global", score: 1000, meta: "node-red"},
+                        {name: "env", value: "env", score: 1000, meta: "node-red"},
+                        
+                        // Node.js modules
+                        {name: "fs", value: "fs", score: 900, meta: "nodejs"},
+                        {name: "path", value: "path", score: 900, meta: "nodejs"},
+                        {name: "os", value: "os", score: 900, meta: "nodejs"},
+                        {name: "crypto", value: "crypto", score: 900, meta: "nodejs"},
+                        {name: "util", value: "util", score: 900, meta: "nodejs"},
+                        {name: "Buffer", value: "Buffer", score: 900, meta: "nodejs"},
+                        {name: "fetch", value: "fetch", score: 900, meta: "nodejs"},
+                        
+                        // Keywords
+                        {name: "return", value: "return ", score: 800, meta: "keyword"},
+                        {name: "await", value: "await ", score: 800, meta: "keyword"},
+                        {name: "async", value: "async ", score: 800, meta: "keyword"}
+                    ];
+                    callback(null, completions);
+                }
+            });
+        }
+    }
+
     var invalidModuleVNames = [
         'console',
         'util',
@@ -531,7 +705,7 @@
             });
 
             var buildEditor = function(id, stateId, focus, value, defaultValue, extraLibs, offset) {
-                var editor = RED.editor.createEditor({
+                var editor = RED.editor.createEditor(configEditor({
                     id: id,
                     mode: 'ace/mode/nrjavascript',
                     value: value || defaultValue || "",
@@ -552,11 +726,12 @@
                         clearInterval: true
                     },
                     extraLibs: extraLibs
-                });
+                }));
                 if (defaultValue && value === "") {
                     editor.moveCursorTo(defaultValue.split("\n").length +offset, 0);
                 }
                 editor.__stateId = stateId;
+                setEditor(editor);
                 return editor;
             }
             this.initEditor = buildEditor('node-input-init-editor', this.id + "/" + "initEditor", false, $("#node-input-initialize").val(), tr("function.text.initialize"), undefined, 0);
@@ -607,7 +782,7 @@
                     var value = editor.getValue();
                     editor.saveView(`inside function-expandButtonClickHandler ${editor.__stateId}`);
                     var extraLibs = that.libs || [];
-                    RED.editor.editJavaScript({
+                    RED.editor.editJavaScript(configEditor({
                         value: value,
                         width: "Infinity",
                         stateId: editor.__stateId,
@@ -626,7 +801,8 @@
                             }, 250);
                         },
                         extraLibs: extraLibs
-                    });
+                    }));
+                    setEditor(RED.editor);
                 }
             }
             $("#node-init-expand-js").on("click", expandButtonClickHandler(this.initEditor));
