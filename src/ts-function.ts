@@ -1,18 +1,14 @@
 import { NodeAPI, Node, NodeDef } from 'node-red';
 import * as vm from 'vm';
 import ts from 'typescript';
-import fs from 'fs/promises';
-import path from 'path';
-import os from 'os';
-import crypto from 'crypto';
 import util from 'util';
-import process from 'process';
 
 export interface TypeScriptNodeDef extends NodeDef {
     name: string;
     script: string;
     outputs: number;
     useVm: boolean;
+    libs?: Array<{var: string, module: string}>;
 }
 
 interface Compilation {
@@ -104,7 +100,31 @@ function compileTypeScript(node: Node, script: string): string {
     }
 }
 
-function newCompilation(node: Node, script: string, useVm: boolean, RED: any): Compilation|undefined {
+async function injectModules(context: any, libs: any[], RED: any, node: Node): Promise<void> {
+    if (!libs || libs.length === 0) return;
+    
+    const moduleLoadPromises = libs.map(async (lib) => {
+        const vname = lib.var;
+        if (!vname || vname === '') return;
+        
+        if (context.hasOwnProperty(vname) || vname === 'node') {
+            throw new Error(`Module variable name '${vname}' is reserved or already exists`);
+        }
+        
+        try {
+            // Utiliser RED.import() comme dans le code original
+            const loadedModule = await RED.import(lib.module);
+            context[vname] = loadedModule.default || loadedModule;
+        } catch (err: any) {
+            node.error(`Failed to load module '${lib.module}': ${err.message}`);
+            throw err;
+        }
+    });
+    
+    await Promise.all(moduleLoadPromises);
+}
+
+async function newCompilation(node: Node, script: string, useVm: boolean, RED: any, libs: any[] = []): Promise<Compilation|undefined> {
     node.log(`TS: New Compilation (useVm:${useVm})`);
     node.log(script);
 
@@ -116,18 +136,16 @@ function newCompilation(node: Node, script: string, useVm: boolean, RED: any): C
     
     const ctx: any = {
         msg: {},
-        fs,
-        path,
-        os,
-        crypto,
-        util,
-        process,
-        require,
-        Buffer: Buffer,
-        fetch: global.fetch || require('node-fetch').default,
         node,
         RED,
         __global: global,
+        console,
+        util,
+        Buffer: Buffer,
+        URL: URL,
+        URLSearchParams: URLSearchParams,
+        Date: Date,
+        require,
         env: {
             get: (envVar: string) => RED.util.getSetting(node, envVar)
         },
@@ -175,6 +193,9 @@ function newCompilation(node: Node, script: string, useVm: boolean, RED: any): C
             }
         }
     };
+
+    // Injecter les modules (incluant ceux par défaut définis dans le HTML)
+    await injectModules(ctx, libs, RED, node);
 
     let exec: (msg: any) => Promise<any[]>;
 
@@ -231,6 +252,7 @@ module.exports = (RED: NodeAPI) => {
             try {
                 const script: string = def.script || '';
                 const useVm: boolean = def.useVm === true;
+                const libs: any[] = def.libs || [];
 
                 let comp = cache[this.id];
 
@@ -239,7 +261,7 @@ module.exports = (RED: NodeAPI) => {
                     comp.script !== script ||
                     comp.useVm !== useVm
                 ) {
-                    comp = newCompilation(this, script, useVm, RED);
+                    comp = await newCompilation(this, script, useVm, RED, libs);
                     if (!comp) return;
                     cache[this.id] = comp;
                     this.log('Script compiled and cached');
