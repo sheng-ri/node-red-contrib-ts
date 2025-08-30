@@ -138,7 +138,7 @@ async function newCompilation(node: TsNode, comp: Compilation, def: TypeScriptNo
     const useVm = def.useVm === true;
     const libs = def.libs || [];
 
-    const funTs = def.func || (def as any).script || '';
+    const funTs = def.func || '';
     const iniTs = def.initialize || '';
     const finTs = def.finalize || '';
     const timeout = Number(def.timeout) || undefined;
