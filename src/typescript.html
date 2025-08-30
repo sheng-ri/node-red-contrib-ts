@@ -96,6 +96,12 @@
                 <label for="node-input-useVm" style="width:70%;" title="Use VM instead of Function constructor (slower but more secure)">Use VM mode (slower but more secure)</label>
             </div>
 
+            <div class="form-row node-input-libs-row hide node-text-editor-row" style="position:relative; margin-top: 10px;">
+                <label for="node-input-declare" style="width: 200px;"><i class="fa fa-code"></i> Type Declarations</label>
+                <div style="height: 100px; min-height:80px;" class="node-text-editor" id="node-input-declare-editor"></div>
+                <div style="position: absolute; right:0; bottom: calc(100% - 20px); z-Index: 10;"><button type="button" id="node-declare-expand-js" class="red-ui-button red-ui-button-small"><i class="fa fa-expand"></i></button></div>
+            </div>
+            
             <div class="form-row node-input-libs-row hide" style="margin-bottom: 0px;">
                 <label><i class="fa fa-cubes"></i> <span data-i18n="node-red:function.label.modules"></span></label>
             </div>
@@ -104,14 +110,6 @@
                 <button type="button" id="node-add-default-modules" class="red-ui-button red-ui-button-small" style="position: absolute; right: 0; bottom: 0;" title="Add default modules">
                     <i class="fa fa-cubes"></i><span> Add Defaults</span>
                 </button>
-            </div>
-            
-            <div class="form-row node-input-libs-row hide" style="margin-top: 10px;">
-                <label for="node-input-declare" style="width: 200px;"><i class="fa fa-code"></i> Type Declarations</label>
-            </div>
-            <div class="form-row node-input-libs-row hide node-text-editor-row" style="position:relative">
-                <div style="height: 160px; min-height:120px;" class="node-text-editor" id="node-input-declare-editor"></div>
-                <div style="position: absolute; right:0; bottom: calc(100% - 20px); z-Index: 10;"><button type="button" id="node-declare-expand-js" class="red-ui-button red-ui-button-small"><i class="fa fa-expand"></i></button></div>
             </div>
         </div>
 
