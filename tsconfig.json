@@ -11,6 +11,6 @@
     "noEmit": true,
     "moduleResolution": "node"
   },
-  "include": ["src/**/*", "tmp/turbo-exec copy.ts"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "*.js"]
 }

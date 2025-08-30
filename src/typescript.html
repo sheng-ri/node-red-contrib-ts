@@ -1,4 +1,4 @@
-<script type="text/html" data-template-name="ts-function">
+<script type="text/html" data-template-name="typescript">
     <style>
         .func-tabs-row {
             margin-bottom: 0;
@@ -199,12 +199,12 @@
 
     var knownFunctionNodes = {};
     RED.events.on("nodes:add", function(n) {
-        if (n.type === "ts-function") {
+        if (n.type === "typescript") {
             knownFunctionNodes[n.id] = n;
         }
     })
     RED.events.on("nodes:remove", function(n) {
-        if (n.type === "ts-function") {
+        if (n.type === "typescript") {
             delete knownFunctionNodes[n.id];
         }
     })
@@ -405,7 +405,7 @@
         return _libs;
     }
 
-    RED.nodes.registerType('ts-function',{
+    RED.nodes.registerType('typescript',{
         color: "#61adff",
         category: 'function',
         paletteLabel: 'typescript',
