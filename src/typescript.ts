@@ -3,7 +3,7 @@ import * as vm from 'vm';
 import ts from 'typescript';
 import util from 'util';
 
-export interface TypeScriptNodeDef extends NodeDef {
+interface TypeScriptNodeDef extends NodeDef {
     name: string;
     func: string;
     initialize?: string;
@@ -321,7 +321,7 @@ interface TsNode extends Node {
     comp: Compilation | undefined;
 }
 
-module.exports = (RED: NodeAPI) => {
+export = (RED: NodeAPI) => {
     const TypeScriptNode = function(this: TsNode, def: TypeScriptNodeDef) {
         RED.nodes.createNode(this, def);
 
