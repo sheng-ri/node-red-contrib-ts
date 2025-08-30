@@ -65,6 +65,7 @@
     <input type="hidden" id="node-input-finalize">
     <input type="hidden" id="node-input-initialize">
     <input type="hidden" id="node-input-updated">
+    <input type="hidden" id="node-input-declare">
 
     <div class="form-row">
         <label for="node-input-name"><i class="fa fa-tag"></i> <span data-i18n="common.label.name"></span></label>
@@ -103,6 +104,14 @@
                 <button type="button" id="node-add-default-modules" class="red-ui-button red-ui-button-small" style="position: absolute; right: 0; bottom: 0;" title="Add default modules">
                     <i class="fa fa-cubes"></i><span> Add Defaults</span>
                 </button>
+            </div>
+            
+            <div class="form-row node-input-libs-row hide" style="margin-top: 10px;">
+                <label for="node-input-declare" style="width: 200px;"><i class="fa fa-code"></i> Type Declarations</label>
+            </div>
+            <div class="form-row node-input-libs-row hide node-text-editor-row" style="position:relative">
+                <div style="height: 160px; min-height:120px;" class="node-text-editor" id="node-input-declare-editor"></div>
+                <div style="position: absolute; right:0; bottom: calc(100% - 20px); z-Index: 10;"><button type="button" id="node-declare-expand-js" class="red-ui-button red-ui-button-small"><i class="fa fa-expand"></i></button></div>
             </div>
         </div>
 
@@ -182,7 +191,7 @@
         throw new Error(msg + ' is required');
     }
 
-    function configMonaco(editor) {
+    function configMonaco(editor, customDeclare) {
         console.log('[TS] Config Monaco', editor);
 
         const monaco = window.monaco || throwRequired('monaco');
@@ -191,17 +200,17 @@
         const tsEditor = editor || throwRequired('tsEditor');
         const tsConfig = tsLanguage.typescriptDefaults || throwRequired('typescriptDefaults');
         
-        // Only configure once per session
-        if (!window.tsConfigured) {
-            console.log('[TS] Configuring TypeScript language service');
-
-            const msgType = `declare const msg: {
+        // Get custom declarations or use default
+        const declare = customDeclare || `declare const msg: {
     payload: any;
     [prop: string]: any;
-};`
+};`;
 
-            // Add Node-RED global types
-            const nodeRedTypes = `/// <reference lib="es2022" />
+        // Always update types to reflect current declarations
+        console.log('[TS] Updating TypeScript types with declarations:', declare);
+
+        // Add Node-RED global types
+        const nodeRedTypes = `/// <reference lib="es2022" />
 declare const node: {
     log: (message: string) => void;
     warn: (message: string) => void;
@@ -246,9 +255,13 @@ declare const Buffer: typeof globalThis.Buffer;
 declare const fetch: typeof globalThis.fetch;
 declare const require: typeof globalThis.require;
 
-${msgType}}`;
-            tsConfig.addExtraLib(nodeRedTypes, 'file:///node-red-types.d.ts');
+${declare}`;
+        
+        // Update or add the extra lib
+        tsConfig.addExtraLib(nodeRedTypes, 'file:///node-red-types.d.ts');
 
+        // Only configure once per session
+        if (!window.tsConfigured) {
             tsConfig.setDiagnosticsOptions({
                 noSemanticValidation: false,
                 noSyntaxValidation: false,
@@ -332,7 +345,12 @@ ${msgType}}`;
             // Wait for editor to be ready, then configure
             setTimeout(() => {
                 try {
-                    configMonaco(editor);
+                    // Get current declarations from the editor (need to find the node instance)
+                    let customDeclare = null;
+                    if (window.currentNodeInstance && window.currentNodeInstance.declareEditor) {
+                        customDeclare = window.currentNodeInstance.declareEditor.getValue();
+                    }
+                    configMonaco(editor, customDeclare);
                     
                     // Verify TypeScript is working after configuration
                     setTimeout(() => {
@@ -632,6 +650,7 @@ ${msgType}}`;
             timeout:{value:RED.settings.functionTimeout || 0},
             useVm: {value:false},
             updated: {value:0},
+            declare: {value:"declare const msg: {\n    payload: any;\n    [prop: string]: any;\n};"},
             noerr: {value:0,required:true,
                     validate: function(v, opt) {
                         if (!v) {
@@ -670,6 +689,7 @@ ${msgType}}`;
         },
         oneditprepare: function() {
             var that = this;
+            window.currentNodeInstance = this;
 
             var tabs = RED.tabs.create({
                 id: "func-tabs",
@@ -779,6 +799,7 @@ ${msgType}}`;
             this.initEditor = buildEditor('node-input-init-editor', this.id + "/" + "initEditor", false, $("#node-input-initialize").val(), tr("function.text.initialize"), undefined, 0);
             this.editor = buildEditor('node-input-func-editor', this.id + "/" + "editor", true, $("#node-input-func").val(), undefined, that.libs || [], undefined, -1);
             this.finalizeEditor = buildEditor('node-input-finalize-editor', this.id + "/" + "finalizeEditor", false, $("#node-input-finalize").val(), tr("function.text.finalize"), undefined, 0);
+            this.declareEditor = buildEditor('node-input-declare-editor', this.id + "/" + "declareEditor", false, this.declare || "declare const msg: {\n    payload: any;\n    [prop: string]: any;\n};", undefined, undefined, 0);
 
             RED.library.create({
                 url:"functions", // where to get the data from
@@ -850,13 +871,32 @@ ${msgType}}`;
             $("#node-init-expand-js").on("click", expandButtonClickHandler(this.initEditor));
             $("#node-function-expand-js").on("click", expandButtonClickHandler(this.editor));
             $("#node-finalize-expand-js").on("click", expandButtonClickHandler(this.finalizeEditor));
+            $("#node-declare-expand-js").on("click", expandButtonClickHandler(this.declareEditor));
 
             RED.popover.tooltip($("#node-init-expand-js"), tr("common.label.expand"));
             RED.popover.tooltip($("#node-function-expand-js"), tr("common.label.expand"));
             RED.popover.tooltip($("#node-finalize-expand-js"), tr("common.label.expand"));
+            RED.popover.tooltip($("#node-declare-expand-js"), tr("common.label.expand"));
 
             if (RED.settings.functionExternalModules !== false) {
                 prepareLibraryConfig(that);
+                
+                // Update TypeScript types when declarations change
+                if (this.declareEditor) {
+                    this.declareEditor.on('change', function() {
+                        const newDeclare = that.declareEditor.getValue();
+                        // Update all Monaco editors with new declarations
+                        [that.editor, that.initEditor, that.finalizeEditor].forEach(function(editor) {
+                            if (editor && editor.type === "monaco") {
+                                try {
+                                    configMonaco(editor, newDeclare);
+                                } catch (error) {
+                                    console.warn('[TS] Failed to update declarations:', error);
+                                }
+                            }
+                        });
+                    });
+                }
                 
                 // Add default modules button logic
                 $("#node-add-default-modules").on("click", function() {
@@ -909,6 +949,7 @@ ${msgType}}`;
             disposeEditor("editor","node-input-func");
             disposeEditor("initEditor","node-input-initialize", tr("function.text.initialize"));
             disposeEditor("finalizeEditor","node-input-finalize", tr("function.text.finalize"));
+            disposeEditor("declareEditor","node-input-declare");
 
             $("#node-input-noerr").val(noerr);
             this.noerr = noerr;
@@ -925,6 +966,9 @@ ${msgType}}`;
 
             node.finalizeEditor.destroy();
             delete node.finalizeEditor;
+
+            node.declareEditor.destroy();
+            delete node.declareEditor;
         },
         oneditresize: function(size) {
             var rows = $("#dialog-form>div:not(.node-text-editor-row)");
@@ -944,6 +988,10 @@ ${msgType}}`;
             this.initEditor.resize();
             this.editor.resize();
             this.finalizeEditor.resize();
+            
+            if (this.declareEditor) {
+                this.declareEditor.resize();
+            }
 
             $("#node-input-libs-container").css("height", (height - 192)+"px");
         },
