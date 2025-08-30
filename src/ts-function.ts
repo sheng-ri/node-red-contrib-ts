@@ -227,53 +227,53 @@ async function newCompilation(node: TsNode, comp: Compilation, def: TypeScriptNo
     }
     else {
         const vmCtx = vm.createContext(ctx);
+        const vmOptions: vm.RunningCodeOptions = {
+            timeout,
+            displayErrors: true
+        };
         
         comp.fun = (msg) => {
             vmCtx.msg = msg;
-            return vm.runInContext(funJs, vmCtx, {
-                timeout,
-                displayErrors: true
-            });
+            return vm.runInContext(funJs, vmCtx, vmOptions);
         };
-        comp.ini = () => {
-            return vm.runInContext(iniJs, vmCtx, {
-                timeout,
-                displayErrors: true
-            });
-        };
-        comp.fin = () => {
-            return vm.runInContext(finJs, vmCtx, {
-                timeout,
-                displayErrors: true
-            });
-        };
+        comp.ini = () => vm.runInContext(iniJs, vmCtx, vmOptions);
+        comp.fin = () => vm.runInContext(finJs, vmCtx, vmOptions);
     }
 
     try {
         await comp.ini();
     }
     catch (error: any) {
-        node.error('Error in function init: ' + (error.stack || error.message))
+        node.error('Error in function initialize: ' + (error.stack || error.message))
     }
 }
 
 async function getCompilation(node: TsNode, def: TypeScriptNodeDef, RED: any): Promise<Compilation|undefined> {
-    const updated: number = def.updated || 0;
+    try {
+        const updated: number = def.updated || 0;
 
-    if (node.comp?.updated !== updated) {
-        await node.comp?.fin();
-        node.comp = {
-            updated,
-            ready: Promise.resolve(),
-            fun: () => { throw 'no fun' },
-            ini: () => { throw 'no ini' },
-            fin: () => { throw 'no fin' },
-        };
-        node.comp.ready = newCompilation(node, node.comp, def, RED);
+        if (node.comp?.updated !== updated) {
+            try {
+                await node.comp?.fin();
+            } catch (error: any) {
+                node.error('Error in function finalize: ' + (error.stack || error.message));
+            }
+            node.comp = {
+                updated,
+                ready: Promise.resolve(),
+                fun: () => { throw 'no fun' },
+                ini: () => { throw 'no ini' },
+                fin: () => { throw 'no fin' },
+            };
+            node.comp.ready = newCompilation(node, node.comp, def, RED);
+        }
+
+        await node.comp.ready;
+        return node.comp;
+    } catch (error: any) {
+        node.error('Compilation error: ' + (error.stack || error.message));
+        return undefined;
     }
-
-    await node.comp.ready;
-    return node.comp;
 }
 
 interface TsNode extends Node {
@@ -283,23 +283,30 @@ interface TsNode extends Node {
 module.exports = (RED: NodeAPI) => {
     const TypeScriptNode = function(this: TsNode, def: TypeScriptNodeDef) {
         RED.nodes.createNode(this, def);
+
+        // Precompile on node creation
+        getCompilation(this, def, RED);
         
         this.on('input', async (msg: any) => {
-            try {
-                const comp = await getCompilation(this, def, RED);
-                if (!comp) return;
+            const comp = await getCompilation(this, def, RED);
+            if (!comp) return;
 
+            try {
                 const outputs = await comp.fun(msg);
                 this.send(outputs);
-
             } catch (error: any) {
-                this.error(error.stack || error.message);
+                this.error('Error in function execution: ' + (error.stack || error.message));
             }
         });
         
         // Clean up compilation on node close
-        this.on('close', () => {
-            if (this.comp) this.comp.fin();
+        this.on('close', async () => {
+            try {
+                if (this.comp) await this.comp.fin();
+            } catch (error: any) {
+                this.error('Error in function finalize: ' + (error.stack || error.message));
+            }
+
             delete this.comp;
         });
     };
