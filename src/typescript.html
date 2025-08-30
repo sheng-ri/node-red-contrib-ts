@@ -98,10 +98,10 @@
 
             <div class="form-row node-input-libs-row hide node-text-editor-row" style="position:relative; margin-top: 10px;">
                 <label for="node-input-declare" style="width: 200px;"><i class="fa fa-code"></i> Type Declarations</label>
-                <div style="height: 100px; min-height:80px;" class="node-text-editor" id="node-input-declare-editor"></div>
+                <div style="height: 70px; min-height:70px;" class="node-text-editor" id="node-input-declare-editor"></div>
                 <div style="position: absolute; right:0; bottom: calc(100% - 20px); z-Index: 10;">
-                    <button type="button" id="node-autodetect-types-js" class="red-ui-button red-ui-button-small" style="margin-right: 5px;" title="Auto-detect message types from previous nodes">
-                        <i class="fa fa-magic"></i><span> Auto-detect</span>
+                    <button type="button" id="node-reset-declare" class="red-ui-button red-ui-button-small" style="margin-right: 5px;" title="Auto-detect message types from previous nodes">
+                        <i class="fa fa-magic"></i><span> Reset</span>
                     </button>
                     <button type="button" id="node-declare-expand-js" class="red-ui-button red-ui-button-small"><i class="fa fa-expand"></i></button>
                 </div>
@@ -204,13 +204,22 @@
         const tsConfig = tsLanguage.typescriptDefaults || throwRequired('typescriptDefaults');
         
         // Get custom declarations or use default
-        const declare = customDeclare || `declare const msg: {
-    payload: any;
-    [prop: string]: any;
-};`;
+        const declare = customDeclare || defaultDeclare;
 
         // Always update types to reflect current declarations
         console.log('[TS] Updating TypeScript types with declarations:', declare);
+
+// declare const fs: typeof import('fs/promises');
+// declare const path: typeof import('path');
+// declare const os: typeof import('os');
+// declare const crypto: typeof import('crypto');
+// declare const util: typeof import('util');
+// declare const process: typeof import('process');
+// declare const Buffer: typeof globalThis.Buffer;
+// declare const fetch: typeof globalThis.fetch;
+// declare const require: typeof globalThis.require;
+// req?: typeof import('express').Request;
+// res?: typeof import('express').Response;
 
         // Add Node-RED global types
         const nodeRedTypes = `/// <reference lib="es2022" />
@@ -248,17 +257,14 @@ declare const global: any;
 declare const env: {
     get: (key: string) => any;
 };
-declare const fs: typeof import('fs/promises');
-declare const path: typeof import('path');
-declare const os: typeof import('os');
-declare const crypto: typeof import('crypto');
-declare const util: typeof import('util');
-declare const process: typeof import('process');
-declare const Buffer: typeof globalThis.Buffer;
-declare const fetch: typeof globalThis.fetch;
-declare const require: typeof globalThis.require;
-
-${declare}`;
+interface MsgBase {
+    topic?: string;
+    payload: any;
+    [prop: string]: any;
+}
+${declare}
+declare const msg: Msg;
+`;
         
         // Update or add the extra lib
         tsConfig.addExtraLib(nodeRedTypes, 'file:///node-red-types.d.ts');
@@ -416,8 +422,9 @@ ${declare}`;
         }
     }
 
-    function autoDetectMsg(that) {
-        console.debug('autoDetectMsg', that);
+    function resetDeclare(that) {
+        console.log('[TS] Reset declare', that);
+        that.declareEditor.setValue(defaultDeclare);
     }
 
     var invalidModuleVNames = [
@@ -647,6 +654,8 @@ ${declare}`;
         return _libs;
     }
 
+    const defaultDeclare = "interface Msg extends MsgBase {}";
+
     RED.nodes.registerType('typescript',{
         color: "#61adff",
         category: 'function',
@@ -658,7 +667,7 @@ ${declare}`;
             timeout:{value:RED.settings.functionTimeout || 0},
             useVm: {value:false},
             updated: {value:0},
-            declare: {value:"declare const msg: {\n    payload: any;\n    [prop: string]: any;\n};"},
+            declare: {value:""},
             noerr: {value:0,required:true,
                     validate: function(v, opt) {
                         if (!v) {
@@ -807,7 +816,7 @@ ${declare}`;
             this.initEditor = buildEditor('node-input-init-editor', this.id + "/" + "initEditor", false, $("#node-input-initialize").val(), tr("function.text.initialize"), undefined, 0);
             this.editor = buildEditor('node-input-func-editor', this.id + "/" + "editor", true, $("#node-input-func").val(), undefined, that.libs || [], undefined, -1);
             this.finalizeEditor = buildEditor('node-input-finalize-editor', this.id + "/" + "finalizeEditor", false, $("#node-input-finalize").val(), tr("function.text.finalize"), undefined, 0);
-            this.declareEditor = buildEditor('node-input-declare-editor', this.id + "/" + "declareEditor", false, this.declare || "declare const msg: {\n    payload: any;\n    [prop: string]: any;\n};", undefined, undefined, 0);
+            this.declareEditor = buildEditor('node-input-declare-editor', this.id + "/" + "declareEditor", false, this.declare, undefined, undefined, 0);
 
             RED.library.create({
                 url:"functions", // where to get the data from
@@ -885,11 +894,11 @@ ${declare}`;
             RED.popover.tooltip($("#node-function-expand-js"), tr("common.label.expand"));
             RED.popover.tooltip($("#node-finalize-expand-js"), tr("common.label.expand"));
             RED.popover.tooltip($("#node-declare-expand-js"), tr("common.label.expand"));
-            RED.popover.tooltip($("#node-autodetect-types-js"), "Auto-detect message types from connected nodes");
+            RED.popover.tooltip($("#node-reset-declare"), "Reset declare types");
             
             // Auto-detect button handler
-            $("#node-autodetect-types-js").on("click", function() {
-                autoDetectMsg(that);
+            $("#node-reset-declare").on("click", function() {
+                resetDeclare(that);
             });
 
             if (RED.settings.functionExternalModules !== false) {
