@@ -191,101 +191,109 @@
         const tsEditor = editor || throwRequired('tsEditor');
         const tsConfig = tsLanguage.typescriptDefaults || throwRequired('typescriptDefaults');
         
-        window.tsEditor = tsEditor;
-        window.tsConfig = tsConfig;
-        
-        console.log('[TS] Ignoring diagnostic codes: 1375, 1378, 1108');
+        // Only configure once per session
+        if (!window.tsConfigured) {
+            console.log('[TS] Configuring TypeScript language service');
 
-        // Add Node-RED global types
-        const nodeRedTypes = `/// <reference lib="es2022" />
-            /// <reference lib="dom" />
-            declare const msg: {
-                payload: any;
-                [prop: string]: any;
-            };
-            declare const node: {
-                log: (message: string) => void;
-                warn: (message: string) => void;
-                error: (error: string | Error, message?: any) => void;
-                context: () => {
+            // Add Node-RED global types
+            const nodeRedTypes = `/// <reference lib="es2022" />
+                /// <reference lib="dom" />
+                declare const msg: {
+                    payload: any;
+                    [prop: string]: any;
+                };
+                declare const node: {
+                    log: (message: string) => void;
+                    warn: (message: string) => void;
+                    error: (error: string | Error, message?: any) => void;
+                    context: () => {
+                        get: (key: string, store?: string) => any;
+                        set: (key: string, value: any, store?: string) => void;
+                        flow: any;
+                        global: any;
+                    };
+                    send: (msg: any | any[]) => void;
+                    id: string;
+                    type: string;
+                    name?: string;
+                };
+                declare const RED: {
+                    util: {
+                        getSetting: (node: any, key: string) => any;
+                    };
+                };
+                declare const context: {
                     get: (key: string, store?: string) => any;
                     set: (key: string, value: any, store?: string) => void;
                     flow: any;
                     global: any;
                 };
-                send: (msg: any | any[]) => void;
-                id: string;
-                type: string;
-                name?: string;
-            };
-            declare const RED: {
-                util: {
-                    getSetting: (node: any, key: string) => any;
+                declare const flow: any;
+                declare const global: any;
+                declare const env: {
+                    get: (key: string) => any;
                 };
-            };
-            declare const context: {
-                get: (key: string, store?: string) => any;
-                set: (key: string, value: any, store?: string) => void;
-                flow: any;
-                global: any;
-            };
-            declare const flow: any;
-            declare const global: any;
-            declare const env: {
-                get: (key: string) => any;
-            };
-            declare const fs: typeof import('fs/promises');
-            declare const path: typeof import('path');
-            declare const os: typeof import('os');
-            declare const crypto: typeof import('crypto');
-            declare const util: typeof import('util');
-            declare const process: typeof import('process');
-            declare const Buffer: typeof globalThis.Buffer;
-            declare const fetch: typeof globalThis.fetch;
-            declare const require: typeof globalThis.require;
-        `;
-        tsConfig.addExtraLib(nodeRedTypes, 'file:///node-red-types.d.ts');
+                declare const fs: typeof import('fs/promises');
+                declare const path: typeof import('path');
+                declare const os: typeof import('os');
+                declare const crypto: typeof import('crypto');
+                declare const util: typeof import('util');
+                declare const process: typeof import('process');
+                declare const Buffer: typeof globalThis.Buffer;
+                declare const fetch: typeof globalThis.fetch;
+                declare const require: typeof globalThis.require;
+            `;
+            tsConfig.addExtraLib(nodeRedTypes, 'file:///node-red-types.d.ts');
 
-        tsConfig.setDiagnosticsOptions({
-            noSemanticValidation: false,
-            noSyntaxValidation: false,
-            noSuggestionDiagnostics: false,
-            diagnosticCodesToIgnore: [
-                1375, // 'await' expressions are only allowed at the top level of a file when that file is a module
-                1378, // Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022'
-                1108, // A 'return' statement can only be used within a function body
-                2339  // Property 'X' does not exist on type 'unknown'
-            ]
-        });
-        
-        tsConfig.setCompilerOptions({
-            target: tsLanguage.ScriptTarget.ES2022,
-            module: tsLanguage.ModuleKind.ES2022,
-            allowJs: true,
-            lib: ['ES2022', 'DOM'],
-            skipLibCheck: false,
-            noImplicitAny: false,
-            strict: false
-        });
-        
-        console.log('[TS] TypeScript configured', tsConfig);
+            tsConfig.setDiagnosticsOptions({
+                noSemanticValidation: false,
+                noSyntaxValidation: false,
+                noSuggestionDiagnostics: false,
+                diagnosticCodesToIgnore: [
+                    1375, // 'await' expressions are only allowed at the top level of a file when that file is a module
+                    1378, // Top-level 'await' expressions are only allowed when the 'module' option is set to 'es2022'
+                    1108, // A 'return' statement can only be used within a function body
+                    2339  // Property 'X' does not exist on type 'unknown'
+                ]
+            });
+            
+            tsConfig.setCompilerOptions({
+                target: tsLanguage.ScriptTarget.ES2022,
+                module: tsLanguage.ModuleKind.ES2022,
+                allowJs: true,
+                lib: ['ES2022', 'DOM'],
+                skipLibCheck: false,
+                noImplicitAny: false,
+                strict: false
+            });
+            
+            console.log('[TS] TypeScript configured globally');
+            window.tsConfigured = true;
+        }
 
-        tsEditor.getModel || throwRequired('getModel');
-        const tsModel = tsEditor.getModel() || throwRequired('tsModel');
-        window.tsModel = tsModel;
-        
-        console.log('[TS] model uri path', tsModel.uri.path);
-        
-        // Create TypeScript model with proper URI
-        if (!tsModel.uri.path.endsWith('.ts')) {
-            console.log('[TS] Creating .ts model');
-            const newModel = monaco.editor.createModel(
-                tsModel.getValue(),
-                'typescript',
-                monaco.Uri.parse('file:///node-red-contrib-ts.ts')
-            );
-            tsEditor.setModel(newModel);
-            tsModel.dispose();
+        // Configure individual editor model
+        const tsModel = tsEditor.getModel();
+        if (tsModel && !tsModel.uri.path.endsWith('.ts')) {
+            console.log('[TS] Converting model to TypeScript:', tsModel.uri.path);
+            
+            // Generate unique URI for this editor
+            const uniqueId = tsEditor.getId ? tsEditor.getId() : Math.random().toString(36).substr(2, 9);
+            const tsUri = monaco.Uri.parse(`file:///ts-${uniqueId}.ts`);
+            
+            // Check if model already exists with this URI
+            let existingModel = monaco.editor.getModel(tsUri);
+            if (existingModel) {
+                console.log('[TS] Using existing TypeScript model');
+                tsEditor.setModel(existingModel);
+            } else {
+                console.log('[TS] Creating new TypeScript model');
+                const newModel = monaco.editor.createModel(
+                    tsModel.getValue(),
+                    'typescript',
+                    tsUri
+                );
+                tsEditor.setModel(newModel);
+            }
         }
     }
 
