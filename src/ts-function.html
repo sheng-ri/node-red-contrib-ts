@@ -64,6 +64,7 @@
     <input type="hidden" id="node-input-noerr">
     <input type="hidden" id="node-input-finalize">
     <input type="hidden" id="node-input-initialize">
+    <input type="hidden" id="node-input-updated">
 
     <div class="form-row">
         <label for="node-input-name"><i class="fa fa-tag"></i> <span data-i18n="common.label.name"></span></label>
@@ -380,6 +381,7 @@
             outputs: {value:1},
             timeout:{value:RED.settings.functionTimeout || 0},
             useVm: {value:false},
+            updated: {value:0},
             noerr: {value:0,required:true,
                     validate: function(v, opt) {
                         if (!v) {
@@ -631,6 +633,9 @@
             var node = this;
             var noerr = 0;
             $("#node-input-noerr").val(0);
+            
+            // Update timestamp to invalidate compilation cache
+            $("#node-input-updated").val(Date.now());
 
             var disposeEditor = function(editorName,targetName,defaultValue) {
                 var editor = node[editorName];
