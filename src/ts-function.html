@@ -1,4 +1,4 @@
-<script type="text/html" data-template-name="function">
+<script type="text/html" data-template-name="ts-function">
     <style>
         .func-tabs-row {
             margin-bottom: 0;
@@ -145,12 +145,12 @@
 
     var knownFunctionNodes = {};
     RED.events.on("nodes:add", function(n) {
-        if (n.type === "function") {
+        if (n.type === "ts-function") {
             knownFunctionNodes[n.id] = n;
         }
     })
     RED.events.on("nodes:remove", function(n) {
-        if (n.type === "function") {
+        if (n.type === "ts-function") {
             delete knownFunctionNodes[n.id];
         }
     })
@@ -351,9 +351,10 @@
         return _libs;
     }
 
-    RED.nodes.registerType('function',{
+    RED.nodes.registerType('ts-function',{
         color:"#fdd0a2",
         category: 'function',
+        // paletteLabel: 'ts-function',
         defaults: {
             name: {value:"_DEFAULT_"},
             func: {value:"\nreturn msg;"},
@@ -398,9 +399,9 @@
         },
         inputs:1,
         outputs:1,
-        icon: "function.svg",
+        icon: "typescript.svg",
         label: function() {
-            return this.name||this._("function.function");
+            return this.name||"ts-function";
         },
         labelStyle: function() {
             return this.name?"node_label_italic":"";

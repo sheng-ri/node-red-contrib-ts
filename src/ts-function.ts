@@ -260,5 +260,5 @@ module.exports = (RED: NodeAPI) => {
         });
     };
     
-    RED.nodes.registerType("typescript-node", TypeScriptNode);
+    RED.nodes.registerType("ts-function", TypeScriptNode);
 };

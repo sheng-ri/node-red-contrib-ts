@@ -45,6 +45,7 @@
     "version": ">=2.0.0",
     "examples": "examples",
     "nodes": {
+      "ts-function": "dist/ts-function.js",
       "typescript-node": "dist/typescript-node.js"
     }
   },
