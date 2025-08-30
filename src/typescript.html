@@ -223,6 +223,7 @@
 
         // Add Node-RED global types
         const nodeRedTypes = `/// <reference lib="es2022" />
+/// <reference types="node" />
 declare const node: {
     log: (message: string) => void;
     warn: (message: string) => void;
@@ -286,9 +287,11 @@ declare const msg: Msg;
             
             tsConfig.setCompilerOptions({
                 target: tsLanguage.ScriptTarget.ES2022,
-                module: tsLanguage.ModuleKind.ES2022,
+                module: tsLanguage.ModuleKind.NodeNext,
+                moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeNext,
+                types: ['node'],
                 allowJs: true,
-                lib: ['ES2022', 'DOM'],
+                lib: ['ES2022'],
                 skipLibCheck: false,
                 noImplicitAny: true,
                 strict: true,
@@ -339,9 +342,12 @@ declare const msg: Msg;
         }
     }
 
-    function configEditor(options) {
+    function configEditor(options, that) {
         options.mode = "ace/mode/typescript";
         options.language = "typescript";
+
+        const extraLibs = options.extraLibs || [];
+        console.debug('extraLibs', extraLibs, that, options);
         
         return options;
     }
@@ -805,7 +811,7 @@ declare const msg: Msg;
                         clearInterval: true
                     },
                     extraLibs: extraLibs
-                }));
+                }, that));
                 if (defaultValue && value === "") {
                     editor.moveCursorTo(defaultValue.split("\n").length +offset, 0);
                 }
@@ -881,7 +887,7 @@ declare const msg: Msg;
                             }, 250);
                         },
                         extraLibs: extraLibs
-                    }));
+                    }, that));
                     setEditor(RED.editor);
                 }
             }
