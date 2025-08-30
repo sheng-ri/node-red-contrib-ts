@@ -79,17 +79,17 @@
         <div id="func-tab-config" style="display:none">
             <div>
                 <div class="form-row" style="display: inline-block; margin-right: 50px;">
-                    <label for="node-input-outputs"><i class="fa fa-random"></i> <span data-i18n="function.label.outputs"></span></label>
+                    <label for="node-input-outputs"><i class="fa fa-random"></i> <span data-i18n="node-red:function.label.outputs"></span></label>
                     <input id="node-input-outputs" style="width: 60px;" value="1">
                 </div>
                 <div class="form-row" style="display: inline-block;">
-                    <label for="node-input-timeout"><i class="fa fa-clock-o"></i> <span data-i18n="function.label.timeout"></span></label>
+                    <label for="node-input-timeout"><i class="fa fa-clock-o"></i> <span data-i18n="node-red:function.label.timeout"></span></label>
                     <input id="node-input-timeout" style="width: 60px;" data-i18n="[placeholder]join.seconds">
                 </div>
             </div>
 
             <div class="form-row node-input-libs-row hide" style="margin-bottom: 0px;">
-                <label><i class="fa fa-cubes"></i> <span data-i18n="function.label.modules"></span></label>
+                <label><i class="fa fa-cubes"></i> <span data-i18n="node-red:function.label.modules"></span></label>
             </div>
             <div class="form-row node-input-libs-row hide" id="node-input-libs-container-row">
                 <ol id="node-input-libs-container"></ol>
@@ -123,6 +123,16 @@
 <script type="text/javascript">
 
 (function() {
+
+    function tr(key, params) {
+        var result = RED._("node-red:" + key);
+        if (params) {
+            for (var k in params) {
+                result = result.replace('{' + k + '}', params[k]);
+            }
+        }
+        return result;
+    }
 
     var invalidModuleVNames = [
         'console',
@@ -233,7 +243,7 @@
                 var fmoduleSpan = $("<span>").appendTo(row0);
                 var fmodule = $("<input/>", {
                     class: "node-input-libs-val",
-                    placeholder: RED._("node-red:function.require.module"),
+                    placeholder: tr("function.require.module"),
                     type: "text"
                 }).css({
                 }).appendTo(fmoduleSpan).typedInput({
@@ -252,9 +262,9 @@
                     var errors = [];
 
                     if (!RED.utils.checkModuleAllowed(val,null,installAllowList,installDenyList)) {
-                        return RED._("node-red:function.error.moduleNotAllowed",{module:val});
+                        return tr("function.error.moduleNotAllowed", {module: val});
                     } else {
-                        return RED._("node-red:function.error.moduleLoadError",{module:val,error:missingModuleReasons[val]});
+                        return tr("function.error.moduleLoadError", {module: val, error: missingModuleReasons[val]});
                     }
                 })
 
@@ -262,7 +272,7 @@
 
                 var fvar = $("<input/>", {
                     class: "node-input-libs-var red-ui-font-code",
-                    placeholder: RED._("node-red:function.require.var"),
+                    placeholder: tr("function.require.var"),
                     type: "text"
                 }).css({
                 }).appendTo(fvarSpan).val(opt.var);
@@ -270,9 +280,9 @@
                 RED.popover.tooltip(vnameWarning.find("i"),function() {
                     var val = fvar.val();
                     if (invalidModuleVNames.indexOf(val) !== -1) {
-                        return RED._("node-red:function.error.moduleNameReserved",{name:val})
+                        return tr("function.error.moduleNameReserved", {name: val})
                     } else {
-                        return RED._("node-red:function.error.moduleNameError",{name:val})
+                        return tr("function.error.moduleNameError", {name: val})
                     }
                 })
 
@@ -365,7 +375,7 @@
                         if (!v) {
                             return true;
                         }
-                        return RED._("node-red:function.error.invalid-js");
+                        return tr("function.error.invalid-js");
                     }},
             initialize: {value:""},
             finalize: {value:""},
@@ -374,24 +384,16 @@
                 for (var i=0,l=v.length;i<l;i++) {
                     var m = v[i];
                     if (!RED.utils.checkModuleAllowed(m.module,null,installAllowList,installDenyList)) {
-                        return RED._("node-red:function.error.moduleNotAllowed", {
-                            module: m.module
-                        });
+                        return tr("function.error.moduleNotAllowed", {module: m.module});
                     }
                     if (m.var === "" || / /.test(m.var)) {
-                        return RED._("node-red:function.error.moduleNameError", {
-                            name: m.var
-                        });
+                        return tr("function.error.moduleNameError", {name: m.var});
                     }
                     if (missingModules.indexOf(m.module) > -1) {
-                        return RED._("node-red:function.error.missing-module", {
-                            module: m.module
-                        });
+                        return tr("function.error.missing-module", {module: m.module});
                     }
                     if (invalidModuleVNames.indexOf(m.var) !== -1){
-                        return RED._("node-red:function.error.moduleNameError", {
-                            name: m.var
-                        });
+                        return tr("function.error.moduleNameError", {name: m.var});
                     }
                 }
                 return true;
@@ -434,20 +436,20 @@
             tabs.addTab({
                 id: "func-tab-config",
                 iconClass: "fa fa-cog",
-                label: that._("function.label.setup")
+                label: tr("function.label.setup")
             });
 
             tabs.addTab({
                 id: "func-tab-init",
-                label: that._("function.label.initialize")
+                label: tr("function.label.initialize")
             });
             tabs.addTab({
                 id: "func-tab-body",
-                label: that._("function.label.function")
+                label: tr("function.label.function")
             });
             tabs.addTab({
                 id: "func-tab-finalize",
-                label: that._("function.label.finalize")
+                label: tr("function.label.finalize")
             });
 
             tabs.activateTab("func-tab-body");
@@ -513,9 +515,9 @@
                 editor.__stateId = stateId;
                 return editor;
             }
-            this.initEditor = buildEditor('node-input-init-editor', this.id + "/" + "initEditor", false, $("#node-input-initialize").val(), RED._("node-red:function.text.initialize"), undefined, 0);
+            this.initEditor = buildEditor('node-input-init-editor', this.id + "/" + "initEditor", false, $("#node-input-initialize").val(), tr("function.text.initialize"), undefined, 0);
             this.editor = buildEditor('node-input-func-editor', this.id + "/" + "editor", true, $("#node-input-func").val(), undefined, that.libs || [], undefined, -1);
-            this.finalizeEditor = buildEditor('node-input-finalize-editor', this.id + "/" + "finalizeEditor", false, $("#node-input-finalize").val(), RED._("node-red:function.text.finalize"), undefined, 0);
+            this.finalizeEditor = buildEditor('node-input-finalize-editor', this.id + "/" + "finalizeEditor", false, $("#node-input-finalize").val(), tr("function.text.finalize"), undefined, 0);
 
             RED.library.create({
                 url:"functions", // where to get the data from
@@ -530,7 +532,7 @@
                             return that.initEditor.getValue();
                         },
                         set: function(v) {
-                            that.initEditor.setValue(v||RED._("node-red:function.text.initialize"), -1);
+                            that.initEditor.setValue(v||tr("function.text.initialize"), -1);
                         }
                     },
                     {
@@ -539,7 +541,7 @@
                             return that.finalizeEditor.getValue();
                         },
                         set: function(v) {
-                            that.finalizeEditor.setValue(v||RED._("node-red:function.text.finalize"), -1);
+                            that.finalizeEditor.setValue(v||tr("function.text.finalize"), -1);
                         }
                     },
                     {
@@ -587,9 +589,9 @@
             $("#node-function-expand-js").on("click", expandButtonClickHandler(this.editor));
             $("#node-finalize-expand-js").on("click", expandButtonClickHandler(this.finalizeEditor));
 
-            RED.popover.tooltip($("#node-init-expand-js"), RED._("node-red:common.label.expand"));
-            RED.popover.tooltip($("#node-function-expand-js"), RED._("node-red:common.label.expand"));
-            RED.popover.tooltip($("#node-finalize-expand-js"), RED._("node-red:common.label.expand"));
+            RED.popover.tooltip($("#node-init-expand-js"), tr("common.label.expand"));
+            RED.popover.tooltip($("#node-function-expand-js"), tr("common.label.expand"));
+            RED.popover.tooltip($("#node-finalize-expand-js"), tr("common.label.expand"));
 
             if (RED.settings.functionExternalModules !== false) {
                 prepareLibraryConfig(that);
@@ -620,8 +622,8 @@
                 $("#"+targetName).val(val);
             }
             disposeEditor("editor","node-input-func");
-            disposeEditor("initEditor","node-input-initialize", RED._("node-red:function.text.initialize"));
-            disposeEditor("finalizeEditor","node-input-finalize", RED._("node-red:function.text.finalize"));
+            disposeEditor("initEditor","node-input-initialize", tr("function.text.initialize"));
+            disposeEditor("finalizeEditor","node-input-finalize", tr("function.text.finalize"));
 
             $("#node-input-noerr").val(noerr);
             this.noerr = noerr;
