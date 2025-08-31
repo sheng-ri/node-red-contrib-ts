@@ -353,10 +353,6 @@ RED.events.on("runtime-state", function(event) {
 var installAllowList = ['*'];
 var installDenyList = [];
 
-var modulesEnabled = true;
-if (RED.settings.get('externalModules.modules.allowInstall', true) === false) {
-    modulesEnabled = false;
-}
 var settingsAllowList = RED.settings.get("externalModules.modules.allowList")
 var settingsDenyList = RED.settings.get("externalModules.modules.denyList")
 if (settingsAllowList || settingsDenyList) {
@@ -365,10 +361,6 @@ if (settingsAllowList || settingsDenyList) {
 }
 installAllowList = RED.utils.parseModuleList(installAllowList);
 installDenyList = RED.utils.parseModuleList(installDenyList);
-
-
-// object that maps from library name to its descriptor
-var allLibs = [];
 
 function getAllUsedModules() {
     var moduleSet = new Set();
@@ -408,7 +400,7 @@ function prepareLibraryConfig(node: any) {
 
     var libList = $("#node-input-libs-container").css('min-height','100px').css('min-width','450px').editableList({
         header: $('<div><div data-i18n="node-red:function.require.moduleName"></div><div data-i18n="node-red:function.require.importAs"></div></div>'),
-        addItem: function(container: any, i: any, opt: any) {
+        addItem: function(container: any, _i: any, opt: any) {
             var parent = container.parent();
             var row0 = $("<div/>").addClass("node-libs-entry").appendTo(container);
             var fmoduleSpan = $("<span>").appendTo(row0);
@@ -430,8 +422,6 @@ function prepareLibraryConfig(node: any) {
                 if (val === "_custom_") {
                     val = fmodule.val();
                 }
-                var errors = [];
-
                 if (!RED.utils.checkModuleAllowed(val,null,installAllowList,installDenyList)) {
                     return tr("function.error.moduleNotAllowed", {module: val});
                 } else {
@@ -632,7 +622,7 @@ RED.nodes.registerType('typescript',{
         ($( "#node-input-outputs" ) as any).spinner({
             min: 0,
             max: 500,
-            change: function(this: any, event: any, ui: any) {
+            change: function(this: any, _event: any, _ui: any) {
                 var value = parseInt(this.value);
                 value = isNaN(value) ? 1 : value;
                 value = Math.max(value, parseInt($(this).attr("aria-valuemin") || '0'));
@@ -661,7 +651,7 @@ RED.nodes.registerType('typescript',{
             }
         });
 
-        var buildEditor = function(id: any, stateId: any, focus: any, value: any, defaultValue: any, extraLibs: any, offset: any) {
+        var buildEditor = function(id: any, stateId: any, _focus: any, value: any, defaultValue: any, extraLibs: any, offset: any) {
             var editor = RED.editor.createEditor(configEditor({
                 id: id,
                 mode: 'ace/mode/nrjavascript',
@@ -751,7 +741,7 @@ RED.nodes.registerType('typescript',{
                             editor.focus();
                         }, 250);
                     },
-                    complete: function (v, cursor) {
+                    complete: function (v, _cursor) {
                         editor.setValue(v, -1);
                         setTimeout(function () {
                             editor.restoreView();
