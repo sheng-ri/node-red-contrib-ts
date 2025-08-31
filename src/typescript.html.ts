@@ -465,54 +465,35 @@ if (settingsAllowList || settingsDenyList) {
 installAllowList = RED.utils.parseModuleList(installAllowList);
 installDenyList = RED.utils.parseModuleList(installDenyList);
 
-function getStandardModules() {
-    return [
-        "fs",
-        "fs/promises",
-        "path",
-        "os",
-        "crypto",
-        "util",
-        "process", 
-        "stream",
-        "events",
-        "zlib",
-        "child_process",
-        "http",
-        "https", 
-        "url",
-        "querystring",
-        "buffer",
-        "assert",
-        "cluster",
-        "dns", 
-        "net",
-        "tls",
-        "dgram",
-        "readline",
-        "string_decoder",
-        "timers",
-        "express",
-        "axios",
-        "lodash",
-        "moment",
-        "uuid"
-    ];
+function getStandardModules(): Record<string, string> {
+    return {
+        "fs/promises": "fs",
+        "path": "path",
+        "os": "os",
+        "crypto": "crypto",
+        "process": "process",
+        "child_process": "childProcess",
+        "express": "express",
+        "axios": "axios",
+        "lodash": "lodash",
+        "moment": "moment",
+        "uuid": "uuid",
+    };
 }
 
 function prepareLibraryConfig(node: any) {
     $(".node-input-libs-row").show();
     
     // Utilise simplement la liste des modules standards
-    var availableModules = getStandardModules();
+    const availableModules = getStandardModules();
     
-    console.debug('[TS] prepareLibraryConfig - availableModules:', availableModules.length, availableModules);
+    console.debug('[TS] prepareLibraryConfig - availableModules:', Object.keys(availableModules).length, availableModules);
     
-    var typedModules = availableModules.map(function (l) {
+    var typedModules = Object.entries(availableModules).map(([value, label]) => {
         return {
             icon: "fa fa-cube",
-            value: l,
-            label: l,
+            value,
+            label: value,
             hasValue: false,
         };
     });
@@ -520,7 +501,7 @@ function prepareLibraryConfig(node: any) {
         value: "_custom_",
         label: RED._("editor:subflow.licenseOther"),
         icon: "red/images/typedInput/az.svg",
-        hasValue: false,
+        hasValue: true,
     });
 
     var libList = $("#node-input-libs-container").css("min-height", "100px")
@@ -540,11 +521,11 @@ function prepareLibraryConfig(node: any) {
                     type: "text",
                 }).css({}).appendTo(fmoduleSpan).typedInput({
                     types: typedModules as any,
-                    default: availableModules.indexOf(opt.module) > -1
+                    default: opt.module in availableModules
                         ? opt.module
                         : "_custom_",
                 }) as any;
-                if (availableModules.indexOf(opt.module) === -1) {
+                if (!(opt.module in availableModules)) {
                     fmodule.typedInput("value", opt.module);
                 }
                 var moduleWarning = $(
@@ -610,16 +591,21 @@ function prepareLibraryConfig(node: any) {
 
                 fmodule.on("change keyup paste", function (this: any, e: any) {
                     var val = $(this).typedInput("type");
+
                     if (val === "_custom_") {
                         val = $(this).val();
                     }
-                    var varName = (val as string).trim().replace(/^node:/, "")
-                        .replace(/^@/, "").replace(/@.*$/, "").replace(
-                            /[-_/\.].?/g,
-                            function (v) {
-                                return v[1] ? v[1].toUpperCase() : "";
-                            },
-                        );
+                    
+                    var varName = (val as string).trim();
+
+                    if (availableModules[varName]) {
+                        varName = availableModules[varName];
+                    } else {
+                        const firstLower = (v: string) => v ? v[0].toLowerCase() + v.substring(1) : v;
+                        const firstUpper = (v: string) => v ? v[0].toUpperCase() + v.substring(1) : v;
+                        varName = firstLower(varName.replace('node:', '').split(/[\W_]+/).map(firstUpper).join(''));
+                    }
+                    
                     fvar.val(varName);
                     fvar.trigger("change");
 
