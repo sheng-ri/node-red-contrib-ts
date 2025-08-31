@@ -69,7 +69,7 @@ function throwRequired(msg: string) {
     throw new Error(msg + " is required");
 }
 
-function configMonaco(editor: any, customDeclare: any) {
+function configMonaco(editor: any, customDeclare: any, nodeLibs?: any[]) {
     console.debug(
         "[TS] configMonaco starting configuration for editor:",
         editor.getId ? editor.getId() : "unknown",
@@ -117,6 +117,17 @@ function configMonaco(editor: any, customDeclare: any) {
     // req?: typeof import('express').Request;
     // res?: typeof import('express').Response;
 
+    // Generate module declarations based on node's lib list
+    const generateModuleDeclarations = (libs?: any[]): string => {
+        if (!libs || libs.length === 0) return '';
+        
+        return libs.map(lib => {
+            const varName = lib.var;
+            const moduleName = lib.module;
+            return `declare const ${varName}: typeof import('${moduleName}');`;
+        }).join('\n');
+    };
+
     // Add Node-RED global types
     const nodeRedTypes = `/// <reference lib="es2022" />
 /// <reference types="node" />
@@ -137,7 +148,7 @@ declare const clearTimeout: typeof globalThis.clearTimeout;
 declare const setInterval: typeof globalThis.setInterval;
 declare const clearInterval: typeof globalThis.clearInterval;
 
-// Note: fs, path, os, crypto, process are only available if explicitly added as modules
+${generateModuleDeclarations(nodeLibs)}
 
 // Node-RED specific types
 declare const node: {
@@ -327,7 +338,9 @@ function onTsEditorReady(editor: any) {
         }
 
         try {
-            configMonaco(editor, customDeclare);
+            // Get current node's libs for dynamic module declarations
+            const nodeLibs = window.currentNodeInstance ? getLibsList() : [];
+            configMonaco(editor, customDeclare, nodeLibs);
             console.debug(
                 "[TS] configTsEditor Monaco configuration completed successfully",
             );
@@ -673,6 +686,7 @@ function getLibsList() {
             });
         });
     }
+    console.debug('[TS] getLibsList', _libs);
     return _libs;
 }
 
@@ -1027,7 +1041,8 @@ RED.nodes.registerType("typescript", {
                         function (editor) {
                             if (editor && editor.type === "monaco") {
                                 try {
-                                    configMonaco(editor, newDeclare);
+                                    const nodeLibs = getLibsList();
+                                    configMonaco(editor, newDeclare, nodeLibs);
                                 } catch (error) {
                                     console.warn(
                                         "[TS] Failed to update declarations:",
