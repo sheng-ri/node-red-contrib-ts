@@ -120,6 +120,26 @@ function configMonaco(editor: any, customDeclare: any) {
     // Add Node-RED global types
     const nodeRedTypes = `/// <reference lib="es2022" />
 /// <reference types="node" />
+
+// Node.js globals available by default in Node-RED context
+declare const require: NodeRequire;
+declare const Buffer: typeof globalThis.Buffer;
+declare const fetch: typeof globalThis.fetch;
+declare const util: typeof import('util');
+declare const URL: typeof globalThis.URL;
+declare const URLSearchParams: typeof globalThis.URLSearchParams;
+declare const Date: typeof globalThis.Date;
+declare const console: typeof globalThis.console;
+
+// Timer functions (with Node-RED cleanup handling)
+declare const setTimeout: typeof globalThis.setTimeout;
+declare const clearTimeout: typeof globalThis.clearTimeout;
+declare const setInterval: typeof globalThis.setInterval;
+declare const clearInterval: typeof globalThis.clearInterval;
+
+// Note: fs, path, os, crypto, process are only available if explicitly added as modules
+
+// Node-RED specific types
 declare const node: {
 log: (message: string) => void;
 warn: (message: string) => void;
@@ -197,8 +217,10 @@ declare const msg: Msg;
                 monaco.languages.typescript.ModuleResolutionKind.NodeNext,
             types: ["node"],
             allowJs: true,
-            lib: ["ES2022"],
-            skipLibCheck: false,
+            lib: ["ES2022", "ES2022.String", "ES2022.Array", "ES2022.Object"],
+            skipLibCheck: true,
+            esModuleInterop: true,
+            allowSyntheticDefaultImports: true,
             noImplicitAny: true,
             strict: true,
             strictNullChecks: true,
