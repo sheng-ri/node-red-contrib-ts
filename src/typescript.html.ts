@@ -129,10 +129,10 @@ function configMonaco(editor: any, customDeclare: any, nodeLibs?: any[]) {
     };
 
     // Add Node-RED global types
-    const nodeRedTypes = `/// <reference lib="es2022" />
+    const nodeRedTypes = `
+/// <reference lib="es2022" />
 /// <reference types="node" />
 
-// Node.js globals available by default in Node-RED context
 declare const require: NodeRequire;
 declare const Buffer: typeof globalThis.Buffer;
 declare const fetch: typeof globalThis.fetch;
@@ -141,8 +141,6 @@ declare const URL: typeof globalThis.URL;
 declare const URLSearchParams: typeof globalThis.URLSearchParams;
 declare const Date: typeof globalThis.Date;
 declare const console: typeof globalThis.console;
-
-// Timer functions (with Node-RED cleanup handling)
 declare const setTimeout: typeof globalThis.setTimeout;
 declare const clearTimeout: typeof globalThis.clearTimeout;
 declare const setInterval: typeof globalThis.setInterval;
@@ -150,47 +148,48 @@ declare const clearInterval: typeof globalThis.clearInterval;
 
 ${generateModuleDeclarations(nodeLibs)}
 
-// Node-RED specific types
 declare const node: {
-log: (message: string) => void;
-warn: (message: string) => void;
-error: (error: string | Error, message?: any) => void;
-context: () => {
+    log: (message: string) => void;
+    warn: (message: string) => void;
+    error: (error: string | Error, message?: any) => void;
+    context: () => {
+        get: (key: string, store?: string) => any;
+        set: (key: string, value: any, store?: string) => void;
+        flow: any;
+        global: any;
+    };
+    send: (msg: any | any[]) => void;
+    id: string;
+    type: string;
+    name?: string;
+};
+declare const RED: {
+    util: {
+        getSetting: (node: any, key: string) => any;
+    };
+};
+declare const context: {
     get: (key: string, store?: string) => any;
     set: (key: string, value: any, store?: string) => void;
     flow: any;
     global: any;
 };
-send: (msg: any | any[]) => void;
-id: string;
-type: string;
-name?: string;
-};
-declare const RED: {
-util: {
-    getSetting: (node: any, key: string) => any;
-};
-};
-declare const context: {
-get: (key: string, store?: string) => any;
-set: (key: string, value: any, store?: string) => void;
-flow: any;
-global: any;
-};
 declare const flow: {
-get: <T = any>(key: string) => T;
-set: (key: string, value: any) => void;
+    get: <T = any>(key: string) => T;
+    set: (key: string, value: any) => void;
 };
 declare const global: any;
 declare const env: {
-get: (key: string) => any;
+    get: (key: string) => any;
 };
 interface MsgBase {
-topic?: string;
-payload: any;
-[prop: string]: any;
+    topic?: string;
+    payload: any;
+    [prop: string]: any;
 }
+
 ${declare}
+
 declare const msg: Msg;
 `;
 
@@ -232,12 +231,12 @@ declare const msg: Msg;
             skipLibCheck: true,
             esModuleInterop: true,
             allowSyntheticDefaultImports: true,
-            noImplicitAny: true,
-            strict: true,
-            strictNullChecks: true,
-            strictPropertyInitialization: true,
-            noImplicitReturns: true,
-            noImplicitThis: true,
+            noImplicitAny: false,
+            strict: false,
+            strictNullChecks: false,
+            strictPropertyInitialization: false,
+            noImplicitReturns: false,
+            noImplicitThis: false,
         });
         console.debug("[TS] configMonaco compiler options set successfully");
 
@@ -494,12 +493,12 @@ function getStandardModules(): string[] {
         "crypto",
         "process",
         "child_process",
-        "express",
-        "axios",
-        "lodash",
-        "moment",
-        "uuid",
         "zlib",
+        // "express",
+        // "axios",
+        // "lodash",
+        // "moment",
+        // "uuid",
     ];
 }
 
