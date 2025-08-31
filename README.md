@@ -1,6 +1,6 @@
 # Node-RED TypeScript Node
 
-A fast TypeScript execution node for Node-RED with Monaco editor and type checking.
+A fast TypeScript execution node for Node-RED with Monaco editor, type checking, and multi-tab configuration.
 
 ## Installation
 
@@ -13,14 +13,17 @@ npm install node-red-contrib-ts
 
 ## TypeScript Node
 
-Execute TypeScript code directly in your Node-RED flows with full type checking and modern JavaScript features.
+Execute TypeScript code directly in your Node-RED flows with full type checking, modern JavaScript features, and multi-tab editor interface similar to the standard Function node.
 
 ### Features
 
 - **Monaco Editor** - Same editor as VS Code with syntax highlighting and IntelliSense
 - **TypeScript Support** - Full TypeScript compilation with error checking
+- **Multi-Tab Interface** - Separate tabs for initialization, main function, and cleanup code
+- **Custom Type Declarations** - Define your own TypeScript interfaces and types
+- **External Module Support** - Import npm modules with type safety
 - **Async/Await Ready** - Your code runs in an async function context
-- **Multiple Outputs** - Route messages to different outputs (1-10)
+- **Multiple Outputs** - Route messages to different outputs
 - **Two Execution Modes** - Function mode (fast) or VM mode (secure)
 
 ![TypeScript Node](screenshots/node.png)
@@ -51,11 +54,36 @@ Your TypeScript code has access to these variables:
 
 ### Usage
 
-**API call with error handling:**
+**API call with custom types:**
 ```typescript
+// Type Declarations tab
+interface ApiResponse {
+    data: {
+        id: number;
+        name: string;
+        status: 'active' | 'inactive';
+    }[];
+    meta: {
+        total: number;
+        page: number;
+    };
+}
+
+interface Msg extends MsgBase {
+    payload: {
+        userId: number;
+        filter?: string;
+    };
+}
+```
+
+```typescript
+// On Message tab
 try {
     const apiKey = env.get('API_KEY');
-    const response = await fetch('https://api.example.com/data', {
+    const { userId, filter } = msg.payload;
+    
+    const response = await fetch(`https://api.example.com/users/${userId}/data`, {
         headers: { 'Authorization': `Bearer ${apiKey}` }
     });
     
@@ -63,7 +91,11 @@ try {
         throw new Error(`API error: ${response.status}`);
     }
     
-    msg.payload = await response.json();
+    const apiData: ApiResponse = await response.json();
+    msg.payload = apiData.data.filter(item => 
+        filter ? item.name.includes(filter) : true
+    );
+    
     return msg;
 } catch (error) {
     node.error(error.message);
@@ -73,11 +105,23 @@ try {
 
 ### Configuration
 
-- **Script** - Your TypeScript code in the Monaco editor
-- **Outputs** - Number of outputs (1-10)
+The TypeScript node provides the same functionality as the standard Function node but with TypeScript support and enhanced features:
+
+#### Editor Tabs
+
+- **On Start** - Code executed once when the node starts (initialization)
+- **On Message** - Main function code executed for each incoming message  
+- **On Stop** - Code executed when the node is stopped or redeployed (cleanup)
+
+#### Setup Tab
+
+- **Type Declarations** - Define custom TypeScript interfaces and types
+- **External Modules** - Import npm modules with automatic type definitions
+- **Outputs** - Number of outputs
+- **Timeout** - Execution timeout in milliseconds
 - **Execution Mode** - Function mode (faster) or VM mode (more secure)
 
-![Node Configuration](screenshots/props.png)
+![Setup Configuration](screenshots/props2.png)
 
 ### Editor Features
 
