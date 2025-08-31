@@ -1,5 +1,3 @@
-console.debug("[TS] v1.2.2");
-
 declare const RED: any;
 declare const window: typeof globalThis & {
     monaco: any;
@@ -70,31 +68,16 @@ function throwRequired(msg: string) {
 }
 
 function configMonaco(editor: any, customDeclare: any, nodeLibs?: any[]) {
-    console.debug(
-        "[TS] configMonaco starting configuration for editor:",
-        editor.getId ? editor.getId() : "unknown",
-    );
-
     const monaco = window.monaco || throwRequired("monaco");
-    console.debug("[TS] configMonaco monaco object found");
-
     const languages = monaco.languages || throwRequired("languages");
-    console.debug("[TS] configMonaco languages object found");
-
     const tsLanguage = languages.typescript || throwRequired("tsLanguage");
-    console.debug("[TS] configMonaco typescript language found");
-
     const tsEditor = editor || throwRequired("tsEditor");
-    console.debug("[TS] configMonaco editor validated");
-
-    const tsConfig = tsLanguage.typescriptDefaults ||
-        throwRequired("typescriptDefaults");
-    console.debug("[TS] configMonaco typescript defaults found");
+    const tsConfig = tsLanguage.typescriptDefaults || throwRequired("tsConfig");
+    const jsConfig = tsLanguage.javascriptDefaults || throwRequired("jsConfig");
 
     // Add ExtraLibs From JS loaded by extraLibs options in RED.editor.createEditor function
     // in node-red-master/packages/node_modules/@node-red/editor-client/src/js/ui/editors/code-editors/monaco.js)
-    const jsDefaults = languages.typescript.javascriptDefaults;
-    const extraLibs = jsDefaults.getExtraLibs();
+    const extraLibs = jsConfig.getExtraLibs();
     Object.entries(extraLibs).forEach(([uri, lib]: any) => {
         if (lib && lib.content) {
             tsConfig.addExtraLib(lib.content, uri);
@@ -103,29 +86,6 @@ function configMonaco(editor: any, customDeclare: any, nodeLibs?: any[]) {
 
     // Get custom declarations or use default
     const declare = customDeclare || defaultDeclare;
-    console.debug(
-        "[TS] configMonaco using declarations:",
-        declare ? "custom" : "default",
-        "length:",
-        declare ? declare.length : 0,
-    );
-
-    // Always update types to reflect current declarations
-    console.debug(
-        "[TS] configMonaco updating TypeScript types with declarations",
-    );
-
-    // declare const fs: typeof import('fs/promises');
-    // declare const path: typeof import('path');
-    // declare const os: typeof import('os');
-    // declare const crypto: typeof import('crypto');
-    // declare const util: typeof import('util');
-    // declare const process: typeof import('process');
-    // declare const Buffer: typeof globalThis.Buffer;
-    // declare const fetch: typeof globalThis.fetch;
-    // declare const require: typeof globalThis.require;
-    // req?: typeof import('express').Request;
-    // res?: typeof import('express').Response;
 
     // Generate module declarations based on node's lib list
     const generateModuleDeclarations = (libs?: any[]): string => {
@@ -203,20 +163,10 @@ ${declare}
 declare const msg: Msg;
 `;
 
-    // Update or add the extra lib
-    console.debug(
-        "[TS] configMonaco adding extra lib with",
-        nodeRedTypes.split("\n").length,
-        "lines of type declarations",
-    );
     tsConfig.addExtraLib(nodeRedTypes, "file:///node-red-types.d.ts");
-    console.debug("[TS] configMonaco extra lib added successfully");
 
     // Only configure once per session
     if (!window.tsConfigured) {
-        console.debug(
-            "[TS] configMonaco first-time configuration - setting up global TypeScript options",
-        );
         tsConfig.setDiagnosticsOptions({
             noSemanticValidation: false,
             noSyntaxValidation: false,
@@ -248,87 +198,47 @@ declare const msg: Msg;
             noImplicitReturns: false,
             noImplicitThis: false,
         });
-        console.debug("[TS] configMonaco compiler options set successfully");
-
-        console.debug("[TS] configMonaco TypeScript configured globally");
         window.tsConfigured = true;
-    } else {
-        console.debug(
-            "[TS] configMonaco TypeScript already configured globally, skipping",
-        );
     }
 
     // Configure individual editor model
-    console.debug("[TS] configMonaco configuring individual editor model");
     const tsModel = tsEditor.getModel();
     if (tsModel) {
-        console.debug(
-            "[TS] configMonaco current model found - URI:",
-            tsModel.uri.path,
-            "Language:",
-            tsModel.getLanguageId(),
-        );
-
         if (
             !tsModel.uri.path.endsWith(".ts") ||
             tsModel.getLanguageId() !== "typescript"
         ) {
-            console.debug(
-                "[TS] configMonaco model needs TypeScript conversion",
-            );
-
             // Generate unique URI for this editor
             const uniqueId = tsEditor.getId
                 ? tsEditor.getId()
                 : Math.random().toString(36).substr(2, 9);
             const tsUri = monaco.Uri.parse(`file:///ts-${uniqueId}.ts`);
-            console.debug(
-                "[TS] configMonaco generated unique URI:",
-                tsUri.path,
-            );
 
             // Check if model already exists with this URI
             let existingModel = monaco.editor.getModel(tsUri);
             if (existingModel) {
-                console.debug(
-                    "[TS] configMonaco using existing TypeScript model",
-                );
                 tsEditor.setModel(existingModel);
             } else {
-                console.debug(
-                    "[TS] configMonaco creating new TypeScript model",
-                );
                 const newModel = monaco.editor.createModel(
                     tsModel.getValue(),
                     "typescript",
                     tsUri,
                 );
                 tsEditor.setModel(newModel);
-                console.debug("[TS] configMonaco new model created and set");
             }
         } else {
-            console.debug("[TS] configMonaco model is already TypeScript");
             // Force language to typescript if not already set
             if (tsModel.getLanguageId() !== "typescript") {
                 monaco.editor.setModelLanguage(tsModel, "typescript");
-                console.debug("[TS] configMonaco language set to TypeScript");
             }
         }
     } else {
         console.warn("[TS] configMonaco no model found on editor");
     }
-
-    console.debug("[TS] configMonaco configuration completed successfully");
 }
 
 function onTsEditorReady(editor: any) {
-    console.debug(
-        "[TS] configTsEditor onready callback triggered for editor:",
-        editor.type || "unknown",
-    );
-
     if (editor.type === "monaco") {
-        console.debug("[TS] configTsEditor configuring Monaco editor");
 
         // Get current declarations from the node instance
         let customDeclare = null;
@@ -337,33 +247,16 @@ function onTsEditorReady(editor: any) {
             window.currentNodeInstance.declareEditor
         ) {
             customDeclare = window.currentNodeInstance.declareEditor.getValue();
-            console.debug(
-                "[TS] configTsEditor using custom declarations from declareEditor",
-            );
-        } else {
-            console.debug(
-                "[TS] configTsEditor no custom declarations available, using default",
-            );
         }
 
         try {
             // Get current node's libs for dynamic module declarations
             const nodeLibs = window.currentNodeInstance ? getLibsList() : [];
             configMonaco(editor, customDeclare, nodeLibs);
-            console.debug(
-                "[TS] configTsEditor Monaco configuration completed successfully",
-            );
 
             // Verify configuration
             const model = editor.getModel();
-            if (model) {
-                console.debug(
-                    "[TS] configTsEditor verification - Language:",
-                    model.getLanguageId(),
-                    "URI:",
-                    model.uri.path,
-                );
-            } else {
+            if (!model) {
                 console.warn(
                     "[TS] configTsEditor verification failed - no model found",
                 );
@@ -383,11 +276,6 @@ function onTsEditorReady(editor: any) {
 }
 
 function configTsEditor(options: any, that: any) {
-    console.debug("[TS] configTsEditor called with options:", options);
-
-    const extraLibs = options.extraLibs || [];
-    console.debug("[TS] configTsEditor extraLibs:", extraLibs);
-
     const tsOptions = {
         ...options,
         mode: "ace/mode/typescript",
@@ -408,43 +296,22 @@ function configTsEditor(options: any, that: any) {
         },
         onready: onTsEditorReady,
     };
-
-    console.debug("[TS] configTsEditor returning configured options");
     return tsOptions;
 }
 
 function setEditor(editor: any) {
-    console.debug(
-        "[TS] setEditor called for editor type:",
-        editor.type || "unknown",
-    );
-
     if (editor.type === "monaco") {
-        console.debug(
-            "[TS] setEditor Monaco editor - applying fallback setTimeout configuration",
-        );
         // Fallback to setTimeout since onready callback isn't being triggered
         setTimeout(() => {
-            console.debug("[TS] setEditor setTimeout fallback triggered");
             onTsEditorReady(editor);
         }, 100);
     } else {
         console.warn("[TS] setEditor unknown editor type:", editor.type);
     }
-
-    console.debug("[TS] setEditor configuration completed");
 }
 
 function resetDeclare(that: any) {
-    console.debug(
-        "[TS] resetDeclare called, resetting to default declarations",
-    );
-    console.debug(
-        "[TS] resetDeclare default value length:",
-        defaultDeclare.length,
-    );
     that.declareEditor.setValue(defaultDeclare);
-    console.debug("[TS] resetDeclare completed");
 }
 
 const firstLower = (v: string) => v ? v[0].toLowerCase() + v.substring(1) : v;
@@ -517,8 +384,6 @@ function prepareLibraryConfig(node: any) {
     
     // Utilise simplement la liste des modules standards
     const availableModules = getStandardModules();
-    
-    console.debug('[TS] prepareLibraryConfig - availableModules:', Object.keys(availableModules).length, availableModules);
     
     var typedModules = availableModules.map(name => {
         return {
@@ -695,7 +560,6 @@ function getLibsList() {
             });
         });
     }
-    console.debug('[TS] getLibsList', _libs);
     return _libs;
 }
 
@@ -780,6 +644,21 @@ RED.nodes.registerType("typescript", {
                 if (editor.length) {
                     if (that.editor.nodered && that.editor.type == "monaco") {
                         that.editor.nodered.refreshModuleLibs(getLibsList());
+                        
+                        // Also refresh TypeScript configuration for all editors
+                        try {
+                            const customDeclare = that.declareEditor ? that.declareEditor.getValue() : null;
+                            const nodeLibs = getLibsList();
+                            
+                            // Refresh all Monaco editors
+                            [that.editor, that.initEditor, that.finalizeEditor].forEach(editor => {
+                                if (editor && editor.type === "monaco") {
+                                    configMonaco(editor, customDeclare, nodeLibs);
+                                }
+                            });
+                        } catch (error) {
+                            console.warn("[TS] Failed to refresh Monaco TypeScript on tab change:", error);
+                        }
                     }
                     RED.tray.resize();
                     //auto focus editor on tab switch
