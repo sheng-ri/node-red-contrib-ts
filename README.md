@@ -140,6 +140,6 @@ The editor provides comprehensive TypeScript support with:
 
 ## License
 
-This project is licensed under the LGPL-3.0 License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENSE) file for details.
 
-You are free to use this software in commercial environments and modify it, but any modifications must be shared under the same license.
+You are free to use this software in commercial environments, modify it, and distribute it without requiring to share your modifications.
