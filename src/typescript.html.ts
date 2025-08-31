@@ -444,49 +444,13 @@ var invalidModuleVNames = [
     "promisify",
 ];
 
-var knownFunctionNodes = {};
-RED.events.on("nodes:add", function (n) {
-    if (n.type === "typescript") {
-        knownFunctionNodes[n.id] = n;
-    }
-});
-RED.events.on("nodes:remove", function (n) {
-    if (n.type === "typescript") {
-        delete knownFunctionNodes[n.id];
-    }
-});
-
-var missingModules = [];
-var missingModuleReasons = {};
+// Simplification : on log juste les erreurs de modules manquants dans la console
 RED.events.on("runtime-state", function (event) {
     if (event.error === "missing-modules") {
-        missingModules = event.modules.map(function (m) {
-            missingModuleReasons[m.module] = m.error;
-            return m.module;
+        event.modules.forEach(function (m) {
+            console.error("[TS] Missing module:", m.module, "-", m.error);
         });
-        for (var id in knownFunctionNodes) {
-            if (
-                knownFunctionNodes.hasOwnProperty(id) &&
-                knownFunctionNodes[id].libs &&
-                knownFunctionNodes[id].libs.length > 0
-            ) {
-                RED.editor.validateNode(knownFunctionNodes[id]);
-            }
-        }
-    } else if (!event.text) {
-        missingModuleReasons = {};
-        missingModules = [];
-        for (var id in knownFunctionNodes) {
-            if (
-                knownFunctionNodes.hasOwnProperty(id) &&
-                knownFunctionNodes[id].libs &&
-                knownFunctionNodes[id].libs.length > 0
-            ) {
-                RED.editor.validateNode(knownFunctionNodes[id]);
-            }
-        }
     }
-    RED.view.redraw();
 });
 
 var installAllowList = ["*"];
@@ -501,39 +465,50 @@ if (settingsAllowList || settingsDenyList) {
 installAllowList = RED.utils.parseModuleList(installAllowList);
 installDenyList = RED.utils.parseModuleList(installDenyList);
 
-function getAllUsedModules() {
-    var moduleSet = new Set();
-    for (var id in knownFunctionNodes) {
-        if (knownFunctionNodes.hasOwnProperty(id)) {
-            if (knownFunctionNodes[id].libs) {
-                for (
-                    var i = 0, l = knownFunctionNodes[id].libs.length;
-                    i < l;
-                    i++
-                ) {
-                    if (
-                        RED.utils.checkModuleAllowed(
-                            knownFunctionNodes[id].libs[i].module,
-                            null,
-                            installAllowList,
-                            installDenyList,
-                        )
-                    ) {
-                        moduleSet.add(knownFunctionNodes[id].libs[i].module);
-                    }
-                }
-            }
-        }
-    }
-    var modules = Array.from(moduleSet);
-    modules.sort();
-    return modules;
+function getStandardModules() {
+    return [
+        "fs",
+        "fs/promises",
+        "path",
+        "os",
+        "crypto",
+        "util",
+        "process", 
+        "stream",
+        "events",
+        "zlib",
+        "child_process",
+        "http",
+        "https", 
+        "url",
+        "querystring",
+        "buffer",
+        "assert",
+        "cluster",
+        "dns", 
+        "net",
+        "tls",
+        "dgram",
+        "readline",
+        "string_decoder",
+        "timers",
+        "express",
+        "axios",
+        "lodash",
+        "moment",
+        "uuid"
+    ];
 }
 
 function prepareLibraryConfig(node: any) {
     $(".node-input-libs-row").show();
-    var usedModules = getAllUsedModules();
-    var typedModules = usedModules.map(function (l) {
+    
+    // Utilise simplement la liste des modules standards
+    var availableModules = getStandardModules();
+    
+    console.debug('[TS] prepareLibraryConfig - availableModules:', availableModules.length, availableModules);
+    
+    var typedModules = availableModules.map(function (l) {
         return {
             icon: "fa fa-cube",
             value: l,
@@ -565,11 +540,11 @@ function prepareLibraryConfig(node: any) {
                     type: "text",
                 }).css({}).appendTo(fmoduleSpan).typedInput({
                     types: typedModules as any,
-                    default: usedModules.indexOf(opt.module) > -1
+                    default: availableModules.indexOf(opt.module) > -1
                         ? opt.module
                         : "_custom_",
                 }) as any;
-                if (usedModules.indexOf(opt.module) === -1) {
+                if (availableModules.indexOf(opt.module) === -1) {
                     fmodule.typedInput("value", opt.module);
                 }
                 var moduleWarning = $(
@@ -592,10 +567,7 @@ function prepareLibraryConfig(node: any) {
                             module: val,
                         });
                     } else {
-                        return tr("function.error.moduleLoadError", {
-                            module: val,
-                            error: missingModuleReasons[val],
-                        });
+                        return "Module may not be installed. Check console for errors.";
                     }
                 });
 
@@ -657,8 +629,7 @@ function prepareLibraryConfig(node: any) {
                             null,
                             installAllowList as any,
                             installDenyList as any,
-                        ) &&
-                        ((missingModules as any).indexOf(val as string) === -1)
+                        )
                     ) {
                         fmodule.removeClass("input-error");
                         moduleWarning.removeClass("input-error");
@@ -673,9 +644,7 @@ function prepareLibraryConfig(node: any) {
                         null,
                         installAllowList as any,
                         installDenyList as any,
-                    ) &&
-                    ((missingModules as any).indexOf(opt.module as string) ===
-                        -1)
+                    )
                 ) {
                     fmodule.removeClass("input-error");
                     moduleWarning.removeClass("input-error");
@@ -771,13 +740,8 @@ RED.nodes.registerType("typescript", {
                             name: m.var,
                         });
                     }
-                    if (
-                        (missingModules as any).indexOf(m.module as string) > -1
-                    ) {
-                        return tr("function.error.missing-module", {
-                            module: m.module,
-                        });
-                    }
+                    // Simplification : plus de validation des modules manquants ici
+                    // Les erreurs sont loggées dans la console via runtime-state
                     if (invalidModuleVNames.indexOf(m.var) !== -1) {
                         return tr("function.error.moduleNameError", {
                             name: m.var,
