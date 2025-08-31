@@ -1,6 +1,6 @@
 {
   "name": "node-red-contrib-ts",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Fast TypeScript node with type checking for Node-RED",
   "main": "dist/typescript.js",
   "keywords": [
@@ -24,17 +24,21 @@
   "bugs": {
     "url": "https://github.com/benoitadam/node-red-contrib-ts/issues"
   },
-  "license": "LGPL-3.0",
+  "license": "Apache-2.0",
   "author": "Benoit Adam",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.5"
   },
+  "contributors": [
+    {
+      "name": "Benoit Adam"
+    }
+  ],
   "dependencies": {
-    "typescript": "^5.9.2",
-    "node-fetch": "^3.3.2"
+    "typescript": "^5.9.2"
   },
   "scripts": {
-    "build": "node esbuild.config.js",
+    "build": "node esbuild.config.mjs",
     "dev": "npm-run-all --parallel lint:watch build:watch",
     "lint": "tsc --noEmit",
     "lint:watch": "tsc --noEmit --watch",

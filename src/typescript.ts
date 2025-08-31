@@ -159,7 +159,7 @@ async function newCompilation(node: TsNode, comp: Compilation, def: TypeScriptNo
         URLSearchParams: URLSearchParams,
         Date: Date,
         require,
-        fetch: global.fetch || require('node-fetch').default,
+        fetch,
         context: {
             set: function() {
                 node.context().set.apply(node,arguments as any);

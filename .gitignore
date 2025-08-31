@@ -105,5 +105,7 @@ logs
 ehthumbs.db
 Thumbs.db
 
-local-deployment.sh
 prod-deployment.sh
+node-red-master
+
+C*.md
