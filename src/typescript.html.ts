@@ -425,6 +425,14 @@ function resetDeclare(that: any) {
     console.debug("[TS] resetDeclare completed");
 }
 
+const firstLower = (v: string) => v ? v[0].toLowerCase() + v.substring(1) : v;
+const firstUpper = (v: string) => v ? v[0].toUpperCase() + v.substring(1) : v;
+const getModuleVarName = (v: string) => {
+    v = String(v).replace('node:', '');
+    if (v === 'fs/promises') return 'fs';
+    return firstLower(v.split(/[\W_]+/).map(firstUpper).join(''));
+}
+
 var invalidModuleVNames = [
     "console",
     "util",
@@ -465,20 +473,21 @@ if (settingsAllowList || settingsDenyList) {
 installAllowList = RED.utils.parseModuleList(installAllowList);
 installDenyList = RED.utils.parseModuleList(installDenyList);
 
-function getStandardModules(): Record<string, string> {
-    return {
-        "fs/promises": "fs",
-        "path": "path",
-        "os": "os",
-        "crypto": "crypto",
-        "process": "process",
-        "child_process": "childProcess",
-        "express": "express",
-        "axios": "axios",
-        "lodash": "lodash",
-        "moment": "moment",
-        "uuid": "uuid",
-    };
+function getStandardModules(): string[] {
+    return [
+        "fs/promises",
+        "path",
+        "os",
+        "crypto",
+        "process",
+        "child_process",
+        "express",
+        "axios",
+        "lodash",
+        "moment",
+        "uuid",
+        "zlib",
+    ];
 }
 
 function prepareLibraryConfig(node: any) {
@@ -489,11 +498,11 @@ function prepareLibraryConfig(node: any) {
     
     console.debug('[TS] prepareLibraryConfig - availableModules:', Object.keys(availableModules).length, availableModules);
     
-    var typedModules = Object.entries(availableModules).map(([value, label]) => {
+    var typedModules = availableModules.map(name => {
         return {
             icon: "fa fa-cube",
-            value,
-            label: value,
+            value: name,
+            label: name,
             hasValue: false,
         };
     });
@@ -521,11 +530,9 @@ function prepareLibraryConfig(node: any) {
                     type: "text",
                 }).css({}).appendTo(fmoduleSpan).typedInput({
                     types: typedModules as any,
-                    default: opt.module in availableModules
-                        ? opt.module
-                        : "_custom_",
+                    default: availableModules.includes(opt.module) ? opt.module : "_custom_",
                 }) as any;
-                if (!(opt.module in availableModules)) {
+                if (!availableModules.includes(opt.module)) {
                     fmodule.typedInput("value", opt.module);
                 }
                 var moduleWarning = $(
@@ -596,15 +603,7 @@ function prepareLibraryConfig(node: any) {
                         val = $(this).val();
                     }
                     
-                    var varName = (val as string).trim();
-
-                    if (availableModules[varName]) {
-                        varName = availableModules[varName];
-                    } else {
-                        const firstLower = (v: string) => v ? v[0].toLowerCase() + v.substring(1) : v;
-                        const firstUpper = (v: string) => v ? v[0].toUpperCase() + v.substring(1) : v;
-                        varName = firstLower(varName.replace('node:', '').split(/[\W_]+/).map(firstUpper).join(''));
-                    }
+                    var varName = getModuleVarName(val);
                     
                     fvar.val(varName);
                     fvar.trigger("change");
@@ -1043,21 +1042,12 @@ RED.nodes.registerType("typescript", {
 
             // Add default modules button logic
             $("#node-add-default-modules").on("click", function () {
-                var defaultModules = [
-                    { var: "fs", module: "fs/promises" },
-                    { var: "path", module: "path" },
-                    { var: "os", module: "os" },
-                    { var: "crypto", module: "crypto" },
-                    { var: "process", module: "process" },
-                    { var: "stream", module: "stream" },
-                    { var: "events", module: "events" },
-                    { var: "zlib", module: "zlib" },
-                    { var: "child_process", module: "child_process" },
-                ];
-
                 var libList = $("#node-input-libs-container");
-                defaultModules.forEach(function (module) {
-                    libList.editableList("addItem", module);
+                getStandardModules().forEach((name) => {
+                    libList.editableList("addItem", {
+                        var: getModuleVarName(name),
+                        module: name
+                    });
                 });
             });
         }
