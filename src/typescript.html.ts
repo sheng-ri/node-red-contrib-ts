@@ -91,6 +91,16 @@ function configMonaco(editor: any, customDeclare: any, nodeLibs?: any[]) {
         throwRequired("typescriptDefaults");
     console.debug("[TS] configMonaco typescript defaults found");
 
+    // Add ExtraLibs From JS loaded by extraLibs options in RED.editor.createEditor function
+    // in node-red-master/packages/node_modules/@node-red/editor-client/src/js/ui/editors/code-editors/monaco.js)
+    const jsDefaults = languages.typescript.javascriptDefaults;
+    const extraLibs = jsDefaults.getExtraLibs();
+    Object.entries(extraLibs).forEach(([uri, lib]: any) => {
+        if (lib && lib.content) {
+            tsConfig.addExtraLib(lib.content, uri);
+        }
+    });
+
     // Get custom declarations or use default
     const declare = customDeclare || defaultDeclare;
     console.debug(

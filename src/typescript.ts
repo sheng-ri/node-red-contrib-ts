@@ -147,6 +147,7 @@ async function newCompilation(node: TsNode, comp: Compilation, def: TypeScriptNo
     const iniJs = compileTypeScript(node, `(async function() { ${iniTs} })()`);
     const finJs = compileTypeScript(node, `(async function() { ${finTs} })()`);
     
+    const nodeContext = node.context();
     const ctx: any = {
         msg: {},
         node,
@@ -160,93 +161,49 @@ async function newCompilation(node: TsNode, comp: Compilation, def: TypeScriptNo
         Date: Date,
         require,
         fetch,
-        context: {
-            set: function() {
-                node.context().set.apply(node,arguments as any);
-            },
-            get: function() {
-                return node.context().get.apply(node,arguments as any);
-            },
-            keys: function() {
-                return node.context().keys.apply(node,arguments as any);
-            },
-            get global() {
-                return node.context().global;
-            },
-            get flow() {
-                return node.context().flow;
-            }
-        },
-        flow: {
-            set: function() {
-                node.context().flow.set.apply(node,arguments as any);
-            },
-            get: function() {
-                return node.context().flow.get.apply(node,arguments as any);
-            },
-            keys: function() {
-                return node.context().flow.keys.apply(node,arguments as any);
-            }
-        },
-        global: {
-            set: function() {
-                node.context().global.set.apply(node,arguments as any);
-            },
-            get: function() {
-                return node.context().global.get.apply(node,arguments as any);
-            },
-            keys: function() {
-                return node.context().global.keys.apply(node,arguments as any);
-            }
-        },
+        context: nodeContext,
+        flow: nodeContext.flow,
+        global: nodeContext.global,
         env: {
-            get: function(envVar: any) {
-                return RED.util.getSetting(node, envVar);
-            }
+            get: (envVar: any) => RED.util.getSetting(node, envVar)
         },
-        setTimeout: function () {
-            var func = arguments[0];
-            var timerId: any;
-            arguments[0] = function() {
-                ctx.clearTimeout(timerId);
+        setTimeout: (handler: Function, delayMs?: number) => {
+            const id = setTimeout(() => {
+                ctx.clearTimeout(id);
                 try {
-                    func.apply(this,arguments);
+                    handler();
                 } catch(err) {
-                    node.error(err,{});
+                    node.error(err, {});
                 }
-            };
-            timerId = setTimeout.apply(this, arguments as any);
-            (node as any).outstandingTimers.push(timerId);
-            return timerId;
+            }, delayMs);
+            (node as any).outstandingTimers.push(id);
+            return id;
         },
-        clearTimeout: function(id: any) {
+        clearTimeout: (id: any) => {
             clearTimeout(id);
             var index = (node as any).outstandingTimers.indexOf(id);
             if (index > -1) {
                 (node as any).outstandingTimers.splice(index,1);
             }
         },
-        setInterval: function() {
-            var func = arguments[0];
-            var timerId;
-            arguments[0] = function() {
+        setInterval: (handler: Function, delayMs?: number) => {
+            const id = setInterval(() => {
                 try {
-                    func.apply(this,arguments);
+                    handler();
                 } catch(err) {
                     node.error(err,{});
                 }
-            };
-            timerId = setInterval.apply(this, arguments as any);
-            (node as any).outstandingIntervals.push(timerId);
-            return timerId;
+            }, delayMs);
+            (node as any).outstandingIntervals.push(id);
+            return id;
         },
-        clearInterval: function(id: any) {
+        clearInterval: (id: any) => {
             clearInterval(id);
             var index = (node as any).outstandingIntervals.indexOf(id);
             if (index > -1) {
                 (node as any).outstandingIntervals.splice(index,1);
             }
-        }
+        },
     };
 
     // Inject modules (including default ones defined in HTML)
