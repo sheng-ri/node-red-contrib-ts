@@ -154,9 +154,10 @@ declare const env: {
 };
 interface MsgBase {
     topic?: string;
-    payload: any;
+    payload?: any;
     [prop: string]: any;
 }
+interface Msg extends MsgBase {}
 
 ${declare}
 
@@ -194,6 +195,7 @@ declare const msg: Msg;
             noImplicitAny: false,
             strict: false,
             strictNullChecks: false,
+            suppressImplicitAnyIndexErrors: true,
             strictPropertyInitialization: false,
             noImplicitReturns: false,
             noImplicitThis: false,
