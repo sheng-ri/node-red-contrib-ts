@@ -67,6 +67,7 @@ function throwRequired(msg: string) {
     throw new Error(msg + " is required");
 }
 
+const customDelarePath = 'file:///custom-declare.d.ts'
 function configMonaco(editor: any, customDeclare: any, nodeLibs?: any[]) {
     const monaco = window.monaco || throwRequired("monaco");
     const languages = monaco.languages || throwRequired("languages");
@@ -84,13 +85,10 @@ function configMonaco(editor: any, customDeclare: any, nodeLibs?: any[]) {
         }
     });
 
-    // Get custom declarations or use default
-    const declare = customDeclare || defaultDeclare;
-
     // Generate module declarations based on node's lib list
     const generateModuleDeclarations = (libs?: any[]): string => {
         if (!libs || libs.length === 0) return '';
-        
+
         return libs.map(lib => {
             const varName = lib.var;
             const moduleName = lib.module;
@@ -158,13 +156,14 @@ interface MsgBase {
     [prop: string]: any;
 }
 interface Msg extends MsgBase {}
-
-${declare}
-
 declare const msg: Msg;
+declare const node: {
+    send: (msg: Msg) => void
+}
 `;
 
     tsConfig.addExtraLib(nodeRedTypes, "file:///node-red-types.d.ts");
+    tsConfig.addExtraLib(customDeclare ?? defaultDeclare, customDelarePath);
 
     // Only configure once per session
     if (!window.tsConfigured) {
@@ -383,10 +382,10 @@ function getStandardModules(): string[] {
 
 function prepareLibraryConfig(node: any) {
     $(".node-input-libs-row").show();
-    
+
     // Utilise simplement la liste des modules standards
     const availableModules = getStandardModules();
-    
+
     var typedModules = availableModules.map(name => {
         return {
             icon: "fa fa-cube",
@@ -491,9 +490,9 @@ function prepareLibraryConfig(node: any) {
                     if (val === "_custom_") {
                         val = $(this).val();
                     }
-                    
+
                     var varName = getModuleVarName(val);
-                    
+
                     fvar.val(varName);
                     fvar.trigger("change");
 
@@ -563,6 +562,30 @@ function getLibsList() {
         });
     }
     return _libs;
+}
+
+function removeExtraLib(filePath: string) {
+    const monaco = window.monaco;
+    if (!monaco) throw new Error("monaco not found");
+
+    const tsConfig = monaco.languages.typescript.typescriptDefaults;
+
+    // 1️⃣ 删除 editor model（如果存在）
+    const uri = monaco.Uri.parse(filePath);
+    const model = monaco.editor.getModel(uri);
+    if (model) model.dispose();
+
+    // 2️⃣ 删除 extraLib
+    const currentLibs: Record<string, any> = tsConfig.getExtraLibs();
+    const newLibsArray = Object.entries(currentLibs)
+        .filter(([path]) => path !== filePath)
+        .map(([path, lib]) => ({
+            filePath: path,
+            content: lib.content
+        }));
+
+    // 3️⃣ 覆盖到 tsConfig
+    tsConfig.setExtraLibs(newLibsArray);
 }
 
 const defaultDeclare = "interface Msg extends MsgBase {}";
@@ -636,7 +659,6 @@ RED.nodes.registerType("typescript", {
     oneditprepare: function (this: any) {
         var that = this;
         window.currentNodeInstance = this;
-
         var tabs = RED.tabs.create({
             id: "func-tabs",
             onchange: function (tab: any) {
@@ -646,12 +668,12 @@ RED.nodes.registerType("typescript", {
                 if (editor.length) {
                     if (that.editor.nodered && that.editor.type == "monaco") {
                         that.editor.nodered.refreshModuleLibs(getLibsList());
-                        
+
                         // Also refresh TypeScript configuration for all editors
                         try {
                             const customDeclare = that.declareEditor ? that.declareEditor.getValue() : null;
                             const nodeLibs = getLibsList();
-                            
+
                             // Refresh all Monaco editors
                             [that.editor, that.initEditor, that.finalizeEditor].forEach(editor => {
                                 if (editor && editor.type === "monaco") {
@@ -670,6 +692,9 @@ RED.nodes.registerType("typescript", {
                         that.editor.focus();
                     } else if (that.finalizeEditor.getDomNode() == editor[0]) {
                         that.finalizeEditor.focus();
+                    } else if (that.declareEditor.getDomNode() === editor[0]) {
+                        console.log('hack declare editor error')
+                        removeExtraLib(customDelarePath)
                     }
                 }
             },
@@ -925,6 +950,7 @@ RED.nodes.registerType("typescript", {
             // Update TypeScript types when declarations change
             if (this.declareEditor) {
                 this.declareEditor.on("change", function () {
+                    return
                     const newDeclare = that.declareEditor.getValue();
                     // Update all Monaco editors with new declarations
                     [that.editor, that.initEditor, that.finalizeEditor].forEach(
@@ -977,11 +1003,14 @@ RED.nodes.registerType("typescript", {
             defaultValue?: string,
         ) {
             var editor = node[editorName];
-            var annot = editor.getSession().getAnnotations();
-            for (var k = 0; k < annot.length; k++) {
-                if (annot[k].type === "error") {
-                    noerr += annot.length;
-                    break;
+            console.log('hack validate error')
+            if (editorName !== 'declareEditor') {
+                var annot = editor.getSession().getAnnotations();
+                for (var k = 0; k < annot.length; k++) {
+                    if (annot[k].type === "error") {
+                        noerr += annot.length;
+                        break;
+                    }
                 }
             }
             var val = editor.getValue();
