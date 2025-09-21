@@ -5,6 +5,10 @@ declare const window: typeof globalThis & {
     currentNodeInstance: any;
 };
 
+function debug(...arg: any) {
+    console.log(...arg)
+}
+
 function tr(key: string, params?: Record<string, string | number>) {
     var result = RED._("node-red:" + key);
     if (params) {
@@ -116,21 +120,6 @@ declare const clearInterval: typeof globalThis.clearInterval;
 
 ${generateModuleDeclarations(nodeLibs)}
 
-declare const node: {
-    log: (message: string) => void;
-    warn: (message: string) => void;
-    error: (error: string | Error, message?: any) => void;
-    context: () => {
-        get: (key: string, store?: string) => any;
-        set: (key: string, value: any, store?: string) => void;
-        flow: any;
-        global: any;
-    };
-    send: (msg: any | any[]) => void;
-    id: string;
-    type: string;
-    name?: string;
-};
 declare const RED: {
     util: {
         getSetting: (node: any, key: string) => any;
@@ -150,20 +139,10 @@ declare const global: any;
 declare const env: {
     get: (key: string) => any;
 };
-interface MsgBase {
-    topic?: string;
-    payload?: any;
-    [prop: string]: any;
-}
-interface Msg extends MsgBase {}
-declare const msg: Msg;
-declare const node: {
-    send: (msg: Msg) => void
-}
 `;
 
     tsConfig.addExtraLib(nodeRedTypes, "file:///node-red-types.d.ts");
-    tsConfig.addExtraLib(customDeclare ?? defaultDeclare, customDelarePath);
+    tsConfig.addExtraLib(customDeclare ?? '', customDelarePath);
 
     // Only configure once per session
     if (!window.tsConfigured) {
@@ -312,7 +291,7 @@ function setEditor(editor: any) {
 }
 
 function resetDeclare(that: any) {
-    that.declareEditor.setValue(defaultDeclare);
+    that.declareEditor.setValue('');
 }
 
 const firstLower = (v: string) => v ? v[0].toLowerCase() + v.substring(1) : v;
@@ -588,8 +567,6 @@ function removeExtraLib(filePath: string) {
     tsConfig.setExtraLibs(newLibsArray);
 }
 
-const defaultDeclare = "interface Msg extends MsgBase {}";
-
 RED.nodes.registerType("typescript", {
     color: "#61adff",
     category: "function",
@@ -693,7 +670,7 @@ RED.nodes.registerType("typescript", {
                     } else if (that.finalizeEditor.getDomNode() == editor[0]) {
                         that.finalizeEditor.focus();
                     } else if (that.declareEditor.getDomNode() === editor[0]) {
-                        console.log('hack declare editor error')
+                        debug('hack declare editor error')
                         removeExtraLib(customDelarePath)
                     }
                 }
@@ -1003,7 +980,7 @@ RED.nodes.registerType("typescript", {
             defaultValue?: string,
         ) {
             var editor = node[editorName];
-            console.log('hack validate error')
+            debug('hack validate error')
             if (editorName !== 'declareEditor') {
                 var annot = editor.getSession().getAnnotations();
                 for (var k = 0; k < annot.length; k++) {

@@ -1,4 +1,7 @@
 # Node-RED TypeScript Node
+> Changes in this version:
+> - No declare-error check on close.
+> - Fixed duplicate type definition issue.
 
 A fast TypeScript execution node for Node-RED with Monaco editor, type checking, and multi-tab configuration.
 

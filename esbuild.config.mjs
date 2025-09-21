@@ -11,6 +11,7 @@ const config = {
   sourcemap: false,
   minify: true,
   treeShaking: true,
+  pure: ['debug'],
   // drop: ['console', 'debugger'],
   legalComments: 'none',
   keepNames: false
